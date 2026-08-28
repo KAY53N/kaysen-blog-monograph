@@ -6,14 +6,13 @@ import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { categoryHref, getCategoryList, getFeatured, visiblePosts } from "@/lib/posts";
+import { categoryHref, getCategoryList, getFeatured, postsLabel, visiblePosts } from "@/lib/posts";
 
 const allPosts = visiblePosts(await getCollection("posts"));
-const [latest, ...rest] = allPosts;
-const feed = rest.slice(0, 8);
-const featured = getFeatured(allPosts, 4).filter((post) => post.id !== latest?.id);
+const feed = allPosts.slice(0, 8);
+const featured = getFeatured(allPosts, 4);
 const categoryList = getCategoryList(allPosts);
-const hasMore = rest.length > feed.length;
+const hasMore = allPosts.length > feed.length;
 ---
 
 <BaseLayout>
@@ -22,32 +21,26 @@ const hasMore = rest.length > feed.length;
     <div class="inner">
       <h1 class="sr-only">{siteConfig.name} — {siteConfig.tagline}</h1>
 
-      {latest && (
-        <section class="pt-10 pb-[var(--space-section)] md:pt-14" aria-label="Latest post">
-          <PostCard post={latest} variant="lead" headingLevel="h2" dateLabel="Latest" />
-        </section>
-      )}
-
-      <div class="grid gap-[var(--space-section)] lg:grid-cols-[minmax(0,4fr)_minmax(0,2fr)] lg:gap-12">
+      <div class="grid gap-[var(--space-section)] pt-10 md:pt-14 lg:grid-cols-[minmax(0,4fr)_minmax(0,2fr)] lg:gap-12">
         <section aria-labelledby="more-posts">
-          <h2 id="more-posts" class="section-title">More posts</h2>
+          <h2 id="more-posts" class="section-title">文章</h2>
 
           {feed.length > 0 ? (
             <div class="feed">
               {feed.map((post) => <PostCard post={post} />)}
             </div>
           ) : (
-            <p class="text-muted-foreground">More posts are coming soon.</p>
+            <p class="text-muted-foreground">更多文章即将发布。</p>
           )}
 
           {hasMore && (
-            <a href="/posts/" class="btn btn-outline btn-block mt-16">Browse the archive</a>
+            <a href="/posts/" class="btn btn-outline btn-block mt-16">浏览全部归档</a>
           )}
         </section>
 
         <aside class="sidebar">
           <section aria-labelledby="about-heading">
-            <h2 id="about-heading" class="section-title">About</h2>
+            <h2 id="about-heading" class="section-title">关于</h2>
             <p class="text-lg font-semibold tracking-tight">{siteConfig.name}</p>
             <p class="mt-2 text-pretty text-sm leading-relaxed text-muted-foreground">{siteConfig.about}</p>
             <div class="mt-7 border-t border-border pt-6">
@@ -57,7 +50,7 @@ const hasMore = rest.length > feed.length;
 
           {featured.length > 0 && (
             <section aria-labelledby="featured-heading">
-              <h2 id="featured-heading" class="section-title">Featured</h2>
+              <h2 id="featured-heading" class="section-title">精选</h2>
               <div class="grid gap-7">
                 {featured.map((post) => <PostCard post={post} variant="compact" headingLevel="h3" />)}
               </div>
@@ -66,15 +59,13 @@ const hasMore = rest.length > feed.length;
 
           {categoryList.length > 0 && (
             <section aria-labelledby="categories-heading">
-              <h2 id="categories-heading" class="section-title">Categories</h2>
+              <h2 id="categories-heading" class="section-title">分类</h2>
               <ul class="grid gap-4">
                 {categoryList.map((category) => (
                   <li>
                     <a href={categoryHref(category.name)} class="link-title flex items-center justify-between gap-3">
                       <span class="link-title__text text-base font-semibold tracking-tight">{category.name}</span>
-                      <span class="pill shrink-0">
-                        {category.count} {category.count === 1 ? "post" : "posts"}
-                      </span>
+                      <span class="pill shrink-0">{postsLabel(category.count)}</span>
                     </a>
                   </li>
                 ))}

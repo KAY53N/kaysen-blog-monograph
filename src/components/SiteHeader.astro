@@ -27,7 +27,7 @@ const isCurrentPath = (href: string) =>
     <a href="/" class="wordmark">{siteConfig.name}</a>
 
     <div class="flex items-center gap-5">
-      <nav class="hidden items-center gap-6 md:flex" aria-label="Primary navigation">
+      <nav class="hidden items-center gap-6 md:flex" aria-label="主导航">
         {
           navigation.map((item) => (
             <a
@@ -45,7 +45,7 @@ const isCurrentPath = (href: string) =>
         <a
           href="/search/"
           class="icon-btn"
-          aria-label="Search this site"
+          aria-label="搜索本站"
           aria-haspopup="dialog"
           aria-controls="site-search-dialog"
           data-search-toggle
@@ -62,7 +62,7 @@ const isCurrentPath = (href: string) =>
           role="switch"
           aria-checked="false"
           data-theme-toggle
-          aria-label="Switch to dark mode"
+          aria-label="切换到深色模式"
         >
           <span class="theme-switch__knob" aria-hidden="true">
             <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none">
@@ -85,7 +85,7 @@ const isCurrentPath = (href: string) =>
           <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none">
             <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
           </svg>
-          <span class="sr-only">Open navigation menu</span>
+          <span class="sr-only">打开导航菜单</span>
         </button>
       </div>
     </div>
@@ -100,25 +100,25 @@ const isCurrentPath = (href: string) =>
   data-search-dialog
 >
   <div class="search-panel" data-search-panel data-empty>
-    <form action="/search/" method="get" role="search" aria-label="Site search">
+    <form action="/search/" method="get" role="search" aria-label="站内搜索">
       <div class="search-field">
         <svg aria-hidden="true" class="search-field-icon" viewBox="0 0 24 24" fill="none">
           <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.75" />
           <path d="m16 16 4 4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
         </svg>
-        <h2 id="site-search-title" class="sr-only">Search {siteConfig.name}</h2>
-        <label class="sr-only" for="site-search-input">Search posts</label>
+        <h2 id="site-search-title" class="sr-only">搜索 {siteConfig.name}</h2>
+        <label class="sr-only" for="site-search-input">搜索文章</label>
         <input
           id="site-search-input"
           name="q"
           type="search"
           class="search-input"
-          placeholder="Search posts, categories, authors…"
+          placeholder="搜索文章、分类、作者…"
           autocomplete="off"
           enterkeyhint="search"
           data-search-input
         />
-        <button type="button" class="icon-btn shrink-0" aria-label="Close search" data-search-close>
+        <button type="button" class="icon-btn shrink-0" aria-label="关闭搜索" data-search-close>
           <svg aria-hidden="true" class="h-[1.1rem] w-[1.1rem]" viewBox="0 0 24 24" fill="none">
             <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
           </svg>
@@ -134,10 +134,10 @@ const isCurrentPath = (href: string) =>
       </div>
 
       <div class="search-foot" aria-hidden="true">
-        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-        <span><kbd>↵</kbd> Open</span>
-        <span><kbd data-search-shortcut>Ctrl K</kbd> Toggle</span>
-        <span class="ml-auto hidden sm:inline">Enter searches everything</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+        <span><kbd>↵</kbd> 打开</span>
+        <span><kbd data-search-shortcut>Ctrl K</kbd> 开关</span>
+        <span class="ml-auto hidden sm:inline">回车搜索全部</span>
       </div>
     </form>
   </div>
@@ -148,19 +148,19 @@ const isCurrentPath = (href: string) =>
   class="mobile-menu-panel md:hidden"
   role="dialog"
   aria-modal="true"
-  aria-label="Navigation menu"
+  aria-label="导航菜单"
   hidden
 >
   <div class="flex items-center justify-between gap-6 border-b border-border px-6 py-4">
     <a href="/" class="wordmark">{siteConfig.name}</a>
-    <button type="button" class="icon-btn" data-mobile-menu-close aria-label="Close navigation menu">
+    <button type="button" class="icon-btn" data-mobile-menu-close aria-label="关闭导航菜单">
       <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none">
         <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
       </svg>
     </button>
   </div>
 
-  <nav class="px-6 py-4" aria-label="Mobile navigation">
+  <nav class="px-6 py-4" aria-label="移动端导航">
     <ul>
       {
         navigation.map((item) => (
@@ -282,12 +282,12 @@ const isCurrentPath = (href: string) =>
         .slice(0, 7)
         .map(({ item }) => item);
 
-      heading.textContent = "Results";
-      summary.textContent = `${matches.length} ${matches.length === 1 ? "result" : "results"} for “${raw}”.`;
+      heading.textContent = "搜索结果";
+      summary.textContent = `找到 ${matches.length} 条关于「${raw}」的结果。`;
       results.innerHTML =
         matches.length > 0
           ? matches.map(resultMarkup).join("")
-          : `<p class="search-empty">No posts match that yet. Try a title, topic, or author.</p>`;
+          : `<p class="search-empty">没有匹配的文章，试试标题、分类或作者。</p>`;
     };
 
     const open = () => {

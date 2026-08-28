@@ -93,7 +93,7 @@ const structuredData = {
       <header class="canvas pt-10 md:pt-14">
         <p class="meta post-meta">
           <span class="post-meta__byline">
-            By <a href={authorHref} class="link-sweep post-meta__link">{data.author.name}</a> in{" "}
+            作者 <a href={authorHref} class="link-sweep post-meta__link">{data.author.name}</a>，分类{" "}
             <a href={categoryHref(data.category)} class="link-sweep post-meta__link">{data.category}</a>
           </span>
           <span class="post-meta__dates">
@@ -107,19 +107,19 @@ const structuredData = {
 
         {data.updatedDate && (
           <p class="meta mt-5">
-            <span>Updated <time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate)}</time></span>
+            <span>更新于 <time datetime={data.updatedDate.toISOString()}>{formatDate(data.updatedDate)}</time></span>
           </p>
         )}
 
         <div class="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-6" role="group" aria-labelledby="share-heading">
-          <h2 id="share-heading" class="eyebrow mr-1">Share</h2>
+          <h2 id="share-heading" class="eyebrow mr-1">分享</h2>
           {shareLinks.map((link) => (
             <a
               href={link.href}
               target="_blank"
               rel="noreferrer"
               class="share-btn"
-              aria-label={`Share ${data.title} on ${link.label}`}
+              aria-label={`在 ${link.label} 分享「${data.title}」`}
             >
               <LocalIcon name={link.icon} className="h-4 w-4" />
             </a>
@@ -129,7 +129,7 @@ const structuredData = {
             class="share-btn"
             data-copy-link
             data-copy-url={articleUrl}
-            aria-label={`Copy link to ${data.title}`}
+            aria-label={`复制「${data.title}」的链接`}
           >
             <LocalIcon name="link-45deg" className="h-4 w-4" />
           </button>
@@ -168,12 +168,12 @@ const structuredData = {
 
       {(newer || older) && (
         <footer class="canvas mt-16 border-t border-border pt-8">
-          <nav class="grid gap-8 sm:grid-cols-2" aria-label="Post navigation">
+          <nav class="grid gap-8 sm:grid-cols-2" aria-label="文章导航">
             <div>
               {older && (
                 <a href={postHref(older)} class="link-title link-nudge">
                   <span class="eyebrow">
-                    <span class="link-nudge__arrow link-nudge__arrow--prev">&larr;</span> Previous
+                    <span class="link-nudge__arrow link-nudge__arrow--prev">&larr;</span> 上一篇
                   </span>
                   <span class="link-title__text mt-2 block font-semibold leading-snug">{older.data.title}</span>
                 </a>
@@ -183,7 +183,7 @@ const structuredData = {
               {newer && (
                 <a href={postHref(newer)} class="link-title link-nudge">
                   <span class="eyebrow">
-                    Next <span class="link-nudge__arrow link-nudge__arrow--next">&rarr;</span>
+                    下一篇 <span class="link-nudge__arrow link-nudge__arrow--next">&rarr;</span>
                   </span>
                   <span class="link-title__text mt-2 block font-semibold leading-snug">{newer.data.title}</span>
                 </a>
@@ -196,7 +196,7 @@ const structuredData = {
 
     {related.length > 0 && (
       <section class="canvas mt-[var(--space-section)]" aria-labelledby="keep-reading">
-        <h2 id="keep-reading" class="section-title">Keep reading</h2>
+        <h2 id="keep-reading" class="section-title">继续阅读</h2>
         <div class="grid gap-7">
           {related.map((item) => <PostCard post={item} variant="compact" headingLevel="h3" />)}
         </div>
@@ -216,9 +216,9 @@ const structuredData = {
         try {
           if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
           await navigator.clipboard.writeText(url);
-          if (status) status.textContent = "Link copied";
+          if (status) status.textContent = "链接已复制";
         } catch {
-          if (status) status.textContent = "Copy failed";
+          if (status) status.textContent = "复制失败";
         }
       });
     });
@@ -238,7 +238,7 @@ const structuredData = {
       button.type = "button";
       button.className = "code-copy-button";
       button.setAttribute("aria-describedby", labelId);
-      button.textContent = "Copy";
+      button.textContent = "复制";
       liveRegion.id = labelId;
       liveRegion.className = "sr-only";
       liveRegion.setAttribute("aria-live", "polite");
@@ -250,14 +250,14 @@ const structuredData = {
         try {
           if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
           await navigator.clipboard.writeText(code?.textContent ?? pre.textContent ?? "");
-          button.textContent = "Copied";
-          liveRegion.textContent = "Code copied";
+          button.textContent = "已复制";
+          liveRegion.textContent = "代码已复制";
         } catch {
-          button.textContent = "Failed";
-          liveRegion.textContent = "Copy failed";
+          button.textContent = "失败";
+          liveRegion.textContent = "复制失败";
         }
         window.setTimeout(() => {
-          button.textContent = "Copy";
+          button.textContent = "复制";
         }, 1800);
       });
     });

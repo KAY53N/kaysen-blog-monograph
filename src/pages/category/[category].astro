@@ -10,6 +10,7 @@ import {
   categories,
   categorySlug,
   getPostsByCategory,
+  postsLabel,
   visiblePosts,
   type Category,
   type Post,
@@ -36,16 +37,16 @@ const posts = getPostsByCategory(allPosts, category);
 const description = categoryDescriptions[category];
 ---
 
-<BaseLayout title={category} description={`${description} ${siteConfig.name} posts in ${category}.`}>
+<BaseLayout title={category} description={`${description} ${siteConfig.name} 的 ${category} 文章。`}>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
-        <p class="eyebrow">Category</p>
+        <p class="eyebrow">分类</p>
         <h1 class="pagehead-title">{category}</h1>
         <p class="pagehead-description">{description}</p>
         <p class="meta mt-5">
-          <span>{posts.length} {posts.length === 1 ? "post" : "posts"}</span>
+          <span>{postsLabel(posts.length)}</span>
         </p>
       </header>
 
@@ -53,7 +54,7 @@ const description = categoryDescriptions[category];
         {posts.map((post) => <PostCard post={post} />)}
       </div>
 
-      <a href="/categories/" class="btn btn-outline btn-block mt-16">All categories</a>
+      <a href="/categories/" class="btn btn-outline btn-block mt-16">全部分类</a>
     </div>
   </main>
   <SiteFooter />

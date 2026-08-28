@@ -28,10 +28,10 @@ export const categorySlug = (category: string) =>
 
 /** One line per category, shown on its archive page and in listings. */
 export const categoryDescriptions: Record<Category, string> = {
-  Engineering: "Contracts, tooling, and the day-to-day craft of shipping software.",
-  Reliability: "Incidents, observability, and the habits that keep systems honest.",
-  Cloud: "Infrastructure, cost, and deploy pipelines that stay out of the way.",
-  Security: "Authentication, privacy, and threat work explained for product teams.",
-  AI: "Evaluations, model behavior, and applied automation that holds up in production.",
-  "Design Systems": "Tokens, components, and the systems work that keeps interfaces coherent.",
+  Engineering: "契约、工具，以及把软件真正交付出去的日常手艺。",
+  Reliability: "故障、可观测性，以及让系统保持诚实的习惯。",
+  Cloud: "基础设施、成本，以及不挡路的部署流水线。",
+  Security: "面向产品团队的认证、隐私与威胁相关工作。",
+  AI: "评测、模型行为，以及能在生产环境站住脚的自动化。",
+  "Design Systems": "Token、组件，以及让界面保持一致的系统设计。",
 };

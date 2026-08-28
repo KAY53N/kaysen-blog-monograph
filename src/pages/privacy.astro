@@ -9,44 +9,41 @@ import { visiblePosts } from "@/lib/posts";
 const allPosts = visiblePosts(await getCollection("posts"));
 ---
 
-<BaseLayout title="Privacy" description={`Privacy policy for ${siteConfig.name}.`}>
+<BaseLayout title="隐私" description={`${siteConfig.name} 的隐私政策。`}>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
-        <p class="eyebrow">Privacy</p>
-        <h1 class="pagehead-title">Privacy policy</h1>
+        <p class="eyebrow">隐私</p>
+        <h1 class="pagehead-title">隐私政策</h1>
         <p class="pagehead-description">
-          Starter copy describing what a publication may collect and how it is used. Replace it with
-          your own policy before going live.
+          以下是站点可能收集的信息及用途说明。上线前请替换成你自己的政策。
         </p>
       </header>
 
       <div class="prose">
-        <h2>What is collected</h2>
+        <h2>收集哪些信息</h2>
         <p>
-          This site is statically generated and sets no cookies of its own. If the newsletter or
-          contact form is connected to a provider, that provider receives the details you submit.
+          本站为静态生成，自身不设置 Cookie。如果订阅或联系表单接入了第三方服务，你提交的内容会发给该服务。
         </p>
 
-        <h2>How it is used</h2>
+        <h2>如何使用</h2>
         <p>
-          Submitted details are used only to reply to you or to send the emails you asked for. They
-          are not sold or shared for advertising.
+          提交的信息只用于回复你，或发送你主动订阅的邮件。不会出售，也不会用于广告。
         </p>
 
-        <h2>Your reading preference</h2>
+        <h2>阅读偏好</h2>
         <p>
-          The light or dark reading mode you pick is stored in your browser's local storage under
-          <code>monograph-theme</code>. It never leaves your device and you can clear it at any time.
+          你选择的浅色或深色模式会保存在浏览器的本地存储中，键名为
+          <code>monograph-theme</code>。它不会离开你的设备，随时可以清除。
         </p>
 
-        <h2>Contact</h2>
+        <h2>联系</h2>
         {
           siteConfig.email ? (
-            <p>For privacy requests, email <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>.</p>
+            <p>隐私相关请求请发邮件到 <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>。</p>
           ) : (
-            <p>Add a privacy contact address in <code>src/config/site.ts</code> before publishing.</p>
+            <p>发布前请在 <code>src/config/site.ts</code> 中填写隐私联系邮箱。</p>
           )
         }
       </div>

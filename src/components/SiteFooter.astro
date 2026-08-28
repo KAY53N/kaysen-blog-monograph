@@ -20,7 +20,7 @@ const currentYear = new Date().getFullYear();
   <div class="inner grid gap-10 py-12 text-center md:grid-cols-3 md:items-center md:gap-8 md:text-left">
     <div>
       <a href="/" class="wordmark">{siteConfig.name}</a>
-      <p class="mt-2 text-xs text-muted-foreground">&copy; {currentYear}. All rights reserved.</p>
+      <p class="mt-2 text-xs text-muted-foreground">&copy; {currentYear}. 保留所有权利。</p>
     </div>
 
     <div class="flex flex-col items-center gap-5">
@@ -31,7 +31,7 @@ const currentYear = new Date().getFullYear();
               <a
                 href={item.href}
                 class="social-btn"
-                aria-label={item.label === "RSS" ? "RSS feed" : `${siteConfig.name} on ${item.label}`}
+                aria-label={item.label === "RSS" ? "RSS 订阅" : `${siteConfig.name} 的 ${item.label}`}
                 rel={item.href.startsWith("http") ? "noreferrer" : undefined}
               >
                 <LocalIcon name={item.icon} className="h-[0.95rem] w-[0.95rem]" />
@@ -56,7 +56,7 @@ const currentYear = new Date().getFullYear();
     </div>
 
     <p class="text-xs text-muted-foreground md:text-right">
-      Built with <a href="https://astro.build/" rel="noreferrer" class="link-quiet underline underline-offset-2">Astro</a>
+      基于 <a href="https://astro.build/" rel="noreferrer" class="link-quiet underline underline-offset-2">Astro</a> 构建
     </p>
   </div>
 </footer>

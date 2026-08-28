@@ -11,51 +11,47 @@ const authors = getAllAuthors(allPosts);
 ---
 
 <BaseLayout
-  title="About"
-  description={`About ${siteConfig.name} — what it publishes and who writes it.`}
+  title="关于"
+  description={`关于 ${siteConfig.name}：这里写什么、由谁来写。`}
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
-        <p class="eyebrow">About</p>
+        <p class="eyebrow">关于</p>
         <h1 class="pagehead-title">{siteConfig.name}</h1>
         <p class="pagehead-description">{siteConfig.about}</p>
       </header>
 
       <div class="prose">
-        <h2>What gets published here</h2>
+        <h2>这里会写什么</h2>
         <p>
-          Long-form notes on building software: the decision behind a change, what it cost, and what
-          would be done differently next time. Posts are written to be read once, carefully, rather
-          than skimmed.
+          关于构建软件的长文笔记：一次改动背后的判断、付出的代价，以及下次会怎么做。文章按一次认真读完来写，而不是扫一眼。
         </p>
 
-        <h2>How it is written</h2>
+        <h2>怎么写</h2>
         <p>
-          Every post aims to be reproducible and honest about trade-offs. If something did not work,
-          that goes in too. Corrections are made in place, with the update date shown at the top of
-          the post.
+          每篇文章都尽量可复现，并对取舍保持诚实。没做成的事情也会写进去。勘误会直接改在原文里，并在文首标出更新日期。
         </p>
 
-        <h2>Who writes it</h2>
+        <h2>谁在写</h2>
         <ul>
           {
             authors.map((author) => (
               <li>
-                <a href={`/author/${authorSlug(author.name)}/`}>{author.name}</a> — {author.role} ({author.posts.length} {author.posts.length === 1 ? "post" : "posts"})
+                <a href={`/author/${authorSlug(author.name)}/`}>{author.name}</a> — {author.role}（{author.posts.length} 篇）
               </li>
             ))
           }
         </ul>
 
-        <h2>Get in touch</h2>
+        <h2>联系</h2>
         <p>
-          Questions, corrections, and requests are welcome through the <a href="/contact/">contact page</a>.
+          问题、勘误和请求都欢迎通过 <a href="/contact/">联系页</a> 留言。
         </p>
         {
           siteConfig.email && (
-            <p>You can also email <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a> directly.</p>
+            <p>也可以直接发邮件到 <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>。</p>
           )
         }
       </div>

@@ -19,30 +19,30 @@ const searchItems = allPosts.map((post) => ({
 ---
 
 <BaseLayout
-  title="Search"
-  description={`Search every post published on ${siteConfig.name}.`}
+  title="搜索"
+  description={`搜索 ${siteConfig.name} 已发布的全部文章。`}
   noindex
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
-        <p class="eyebrow">Search</p>
-        <h1 class="pagehead-title">Search posts</h1>
+        <p class="eyebrow">搜索</p>
+        <h1 class="pagehead-title">搜索文章</h1>
 
-        <form class="mt-8" role="search" aria-label="Post search" action="/search/" method="get">
-          <label class="sr-only" for="search-page-input">Search posts</label>
+        <form class="mt-8" role="search" aria-label="文章搜索" action="/search/" method="get">
+          <label class="sr-only" for="search-page-input">搜索文章</label>
           <div class="flex gap-2">
             <input
               id="search-page-input"
               name="q"
               type="search"
               class="field"
-              placeholder="Title, category, or author..."
+              placeholder="标题、分类或作者…"
               autocomplete="off"
               data-search-page-input
             />
-            <button type="submit" class="btn btn-solid shrink-0">Search</button>
+            <button type="submit" class="btn btn-solid shrink-0">搜索</button>
           </div>
         </form>
 
@@ -86,9 +86,7 @@ const searchItems = allPosts.map((post) => ({
         const query = raw.toLowerCase();
         const found = query ? items.filter((item) => matches(item, query)) : [];
 
-        summary.textContent = query
-          ? `${found.length} ${found.length === 1 ? "result" : "results"} for “${raw}”.`
-          : "";
+        summary.textContent = query ? `找到 ${found.length} 条关于「${raw}」的结果。` : "";
 
         results.innerHTML = found
           .map(

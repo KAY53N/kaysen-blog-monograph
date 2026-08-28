@@ -24,7 +24,7 @@ const isDemo = isEnabled && action.length === 0;
     method={newsletter.method}
     data-newsletter-form={isDemo ? "" : undefined}
   >
-    <label class="sr-only" for="newsletter-email">Email address</label>
+    <label class="sr-only" for="newsletter-email">邮箱地址</label>
     <input
       id="newsletter-email"
       required
@@ -36,7 +36,7 @@ const isDemo = isEnabled && action.length === 0;
       class="field"
     />
     <button type="submit" disabled={!isEnabled} class="btn btn-solid btn-block">
-      {isEnabled ? "Subscribe" : "Coming soon"}
+      {isEnabled ? "订阅" : "即将开放"}
     </button>
     <p
       class="newsletter-status text-xs leading-relaxed text-muted-foreground"
@@ -47,7 +47,7 @@ const isDemo = isEnabled && action.length === 0;
     </p>
     {!isEnabled && (
       <p class="text-xs leading-relaxed text-muted-foreground">
-        Signup is disabled until a newsletter provider is configured.
+        尚未配置邮件订阅服务，暂时无法报名。
       </p>
     )}
   </form>
@@ -61,8 +61,7 @@ const isDemo = isEnabled && action.length === 0;
           event.preventDefault();
           const status = form.querySelector("[data-newsletter-status]");
           if (status) {
-            status.textContent =
-              "Thanks. This demo form is not connected to a provider yet, so nothing was sent.";
+            status.textContent = "已收到。这是演示表单，尚未接入服务，所以没有真正发送。";
           }
           form.reset();
         });

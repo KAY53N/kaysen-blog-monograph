@@ -5,7 +5,7 @@ import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { authorSlug, getAllAuthors, visiblePosts, type Post } from "@/lib/posts";
+import { authorSlug, getAllAuthors, postsLabel, visiblePosts, type Post } from "@/lib/posts";
 
 export async function getStaticPaths() {
   const allPosts = visiblePosts(await getCollection("posts"));
@@ -28,16 +28,16 @@ const posts = visiblePosts(allPosts).filter(
 
 <BaseLayout
   title={author.name}
-  description={`Posts by ${author.name}, ${author.role}, on ${siteConfig.name}.`}
+  description={`${author.name}（${author.role}）在 ${siteConfig.name} 上的文章。`}
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
     <div class="canvas">
       <header class="pagehead">
-        <p class="eyebrow">Author</p>
+        <p class="eyebrow">作者</p>
         <h1 class="pagehead-title">{author.name}</h1>
         <p class="pagehead-description">
-          {author.role} &middot; {posts.length} {posts.length === 1 ? "post" : "posts"}
+          {author.role} &middot; {postsLabel(posts.length)}
         </p>
       </header>
 
@@ -45,7 +45,7 @@ const posts = visiblePosts(allPosts).filter(
         {posts.map((post) => <PostCard post={post} />)}
       </div>
 
-      <a href="/author/" class="btn btn-outline btn-block mt-16">All authors</a>
+      <a href="/author/" class="btn btn-outline btn-block mt-16">全部作者</a>
     </div>
   </main>
   <SiteFooter />

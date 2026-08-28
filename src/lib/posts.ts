@@ -33,7 +33,9 @@ export const readingMinutes = (post: Post) => {
   return Math.max(1, Math.round(words / 220));
 };
 
-export const readingLabel = (post: Post) => `${readingMinutes(post)} min read`;
+export const readingLabel = (post: Post) => `${readingMinutes(post)} 分钟阅读`;
+
+export const postsLabel = (count: number) => `${count} 篇`;
 
 export const getFeatured = (posts: Post[], limit = 5) =>
   visiblePosts(posts)

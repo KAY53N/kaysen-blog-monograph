@@ -8,18 +8,18 @@ import { visiblePosts } from "@/lib/posts";
 const allPosts = visiblePosts(await getCollection("posts"));
 ---
 
-<BaseLayout title="Page not found" description="The page you requested could not be found." noindex>
+<BaseLayout title="页面不存在" description="你访问的页面找不到。" noindex>
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer grid min-h-[55vh] place-items-center py-16 text-center">
     <div>
-      <p class="eyebrow">Error 404</p>
-      <h1 class="pagehead-title">Page not found</h1>
+      <p class="eyebrow">错误 404</p>
+      <h1 class="pagehead-title">页面不存在</h1>
       <p class="pagehead-description mx-auto">
-        That post may have moved, or the address may be mistyped.
+        这篇文章可能已经搬家，或者地址写错了。
       </p>
       <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <a href="/" class="btn btn-solid">Back to the front page</a>
-        <a href="/posts/" class="btn btn-outline">Browse the archive</a>
+        <a href="/" class="btn btn-solid">回到首页</a>
+        <a href="/posts/" class="btn btn-outline">浏览归档</a>
       </div>
     </div>
   </main>
