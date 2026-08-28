@@ -5,7 +5,7 @@ export const siteConfig = {
   title: "Monograph - A minimal Astro blog theme",
   description:
     "A text-first Astro theme for essays, notes, and long-form writing, with a command-palette search and a light/dark reading mode.",
-  siteUrl: "https://monograph.xocoweb.workers.dev",
+  siteUrl: "https://kaysen.dev",
   authorName: "Andrei Alba",
   email: "hello@example.com",
   language: "en",
