@@ -184,7 +184,9 @@
   /* Single reading column used by articles and the simple text pages. */
   .canvas {
     max-width: var(--layout-content);
+    width: 100%;
     margin-inline: auto;
+    overflow-x: auto;
   }
 
   /*
@@ -789,17 +791,26 @@
     border-top: 1px solid var(--border);
   }
 
-  .prose img {
+  .prose img,
+  .prose picture,
+  .prose video {
     display: block;
     max-width: 100%;
+    width: auto;
     height: auto;
     margin: 1.75rem 0;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
   }
 
+  .prose p:has(> img),
+  .prose p:has(> picture) {
+    max-width: 100%;
+  }
+
   .prose figure {
     margin: 2rem 0;
+    max-width: 100%;
   }
 
   .prose figcaption {
@@ -818,6 +829,8 @@
 
   .prose pre {
     margin: 1.75rem 0;
+    max-width: 100%;
+    overflow-x: auto;
   }
 
   .prose pre code {
@@ -829,6 +842,7 @@
 
   .prose table {
     width: 100%;
+    max-width: 100%;
     margin: 2rem 0;
     border-collapse: collapse;
     font-size: 0.9375rem;

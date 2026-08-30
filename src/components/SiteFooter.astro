@@ -24,9 +24,26 @@ const currentYear = new Date().getFullYear();
       </ul>
     </nav>
 
-    <p class="text-xs text-muted-foreground md:text-right">
-      基于 <a href="https://astro.build/" rel="noreferrer" class="link-quiet underline underline-offset-2">Astro</a> 构建
-    </p>
+    <div class="flex flex-col items-center gap-2 text-xs text-muted-foreground md:items-end md:text-right">
+      <p>
+        基于 <a href="https://astro.build/" rel="noreferrer" class="link-quiet underline underline-offset-2">Astro</a> 构建
+      </p>
+      <p>
+        <a
+          href="https://dash.cloudflare.com"
+          rel="noreferrer"
+          class="footer-host link-quiet"
+        >
+          <svg class="footer-host-icon" viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M23.2 20.4c.3-1 .2-1.9-.3-2.7-.5-.8-1.3-1.3-2.2-1.5l-10.4-2c-.4-.1-.6-.4-.5-.8.1-.4.4-.6.8-.5l10.4 2c1.6.3 3.1 1.2 4 2.6.9 1.4 1.1 3.1.6 4.7-.8 2.4-3 4-5.6 4H6.8c-2.4 0-4.6-1.6-5.3-3.9-.7-2.3.1-4.8 2-6.2 1.2-.9 2.7-1.3 4.2-1.1l.4 2.1c-1-.1-2 .2-2.8.8-1.3.9-1.8 2.5-1.3 4 .5 1.5 1.9 2.5 3.5 2.5h12.6c1.6 0 3.1-1 3.6-2.5.2-.5.2-1 .1-1.5Zm2.2-7.6c-.4-3.4-3.3-6-6.8-6-3 0-5.6 1.9-6.5 4.7-1-.7-2.3-1-3.5-.8-2.1.3-3.8 2-4.2 4.1C2.8 15 2 16.3 2 17.8c0 .3 0 .6.1.9 1.1-1.8 3-3 5.2-3.2.4 0 .8 0 1.1.1l.5-2.2c.7-3.4 3.8-5.9 7.3-5.9 3.8 0 7 2.7 7.7 6.4 1.6.3 3 1.2 3.8 2.6.2.3.3.6.5.9-.7-2-2.3-3.6-4.4-4.2Z"
+            />
+          </svg>
+          由 Cloudflare 构建并托管
+        </a>
+      </p>
+    </div>
   </div>
 </footer>
 
@@ -36,5 +53,24 @@ const currentYear = new Date().getFullYear();
     height: 2px;
     background: var(--border-strong);
     border-radius: 50%;
+  }
+
+  .footer-host {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-underline-offset: 0.2em;
+  }
+
+  .footer-host:hover,
+  .footer-host:focus-visible {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .footer-host-icon {
+    width: 0.95rem;
+    height: 0.95rem;
+    flex-shrink: 0;
   }
 </style>
