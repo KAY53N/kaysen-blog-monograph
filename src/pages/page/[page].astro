@@ -1,0 +1,40 @@
+---
+import { getCollection } from "astro:content";
+import HomeFeed from "@/components/HomeFeed.astro";
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { siteConfig } from "@/config/site";
+import { homePageSize, paginatePosts, visiblePosts } from "@/lib/posts";
+
+export async function getStaticPaths() {
+  const posts = visiblePosts(await getCollection("posts"));
+  const lastPage = Math.max(1, Math.ceil(posts.length / homePageSize));
+
+  return Array.from({ length: Math.max(0, lastPage - 1) }, (_, index) => ({
+    params: { page: String(index + 2) },
+  }));
+}
+
+const allPosts = visiblePosts(await getCollection("posts"));
+const currentPage = Number(Astro.params.page);
+const page = paginatePosts(allPosts, homePageSize, currentPage);
+---
+
+<BaseLayout
+  title={`文章 - 第 ${page.currentPage} 页`}
+  description={`${siteConfig.name} 的文章列表，第 ${page.currentPage} 页。`}
+  prevUrl={page.prevUrl}
+  nextUrl={page.nextUrl}
+>
+  <SiteHeader posts={allPosts} />
+  <HomeFeed
+    feed={page.data}
+    allPosts={allPosts}
+    currentPage={page.currentPage}
+    lastPage={page.lastPage}
+    prevUrl={page.prevUrl}
+    nextUrl={page.nextUrl}
+  />
+  <SiteFooter />
+</BaseLayout>

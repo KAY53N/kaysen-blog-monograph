@@ -33,12 +33,6 @@ export const siteConfig = {
     method: "post",
     responseTime: "通常会在两个工作日内回复。",
   },
-  socials: [
-    { label: "Instagram", href: "https://instagram.com" },
-    { label: "TikTok", href: "https://www.tiktok.com" },
-    { label: "YouTube", href: "https://www.youtube.com" },
-    { label: "RSS", href: "/rss.xml" },
-  ],
 };
 
 /** Header navigation. Add or remove entries freely; the header renders them in order. */

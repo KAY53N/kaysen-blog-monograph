@@ -5,7 +5,7 @@ Use this guide when adapting Monograph for a real blog.
 ## Site Settings
 
 Edit [src/config/site.ts](./src/config/site.ts) first. It holds the wordmark, default metadata,
-canonical domain, language and date locale, the sidebar about blurb, social links, and the
+canonical domain, language and date locale, the sidebar about blurb, and the
 newsletter and contact form settings.
 
 Set `siteConfig.siteUrl` before building for production. Canonical URLs, social image URLs, RSS,
@@ -34,8 +34,8 @@ export const footerNavigation = [
 ];
 ```
 
-`navigation` renders in the desktop header and the mobile menu; `footerNavigation` renders under the
-social icons in the footer. The current page is marked with `aria-current="page"` automatically, which
+`navigation` renders in the desktop header and the mobile menu; `footerNavigation` renders in the
+footer. The current page is marked with `aria-current="page"` automatically, which
 also leaves its hairline underline in place. Add a category link here to promote one to the top level,
 for example `{ label: "Engineering", href: "/category/engineering/" }`.
 
@@ -75,11 +75,6 @@ Authors come from post frontmatter — there is no separate author file. Each po
 a short `role`, and the theme groups posts by name to build `/author/` and `/author/<name>/`. Keep the
 `role` string identical across a given author's posts, since the listing uses the value it last saw.
 The demo content ships with three authors.
-
-## Featured Posts
-
-Set `featured: true` in a post's frontmatter to list it in the home sidebar's "Featured" section.
-The sidebar shows up to four, newest first, and skips the post already shown as the latest.
 
 ## Feature Images
 
@@ -184,7 +179,7 @@ The reusable hover classes are:
 | `.link-sweep`                                     | Underline wipes in from the left                                    | Post byline links                                                |
 | `.nav-link`                                       | Hairline wipes in underneath; stays for the current page            | Header and footer navigation, pagination                         |
 | `.link-nudge` + `.link-nudge__arrow`              | Arrow leans toward its destination                                  | Pagination, prev/next                                            |
-| `.icon-btn`, `.pill`, `.share-btn`, `.social-btn` | Accent tint, and a 2px lift on the round buttons                    | Header controls, category pills, share and social rows           |
+| `.icon-btn`, `.pill`, `.share-btn`                | Accent tint, and a 2px lift on the round buttons                    | Header controls, category pills, and share buttons               |
 
 Nothing fades out on hover — a hovered item gains emphasis rather than the page losing it. All of it
 collapses to near-instant under `prefers-reduced-motion: reduce`.
@@ -274,11 +269,10 @@ license file if you keep the font.
 
 ## Icons
 
-Social and share icons are local SVGs in [src/icons/bootstrap](./src/icons/bootstrap), rendered
-through [src/components/LocalIcon.astro](./src/components/LocalIcon.astro). To add a network, drop
-its SVG in that folder, register it in `LocalIcon.astro`, and map the label in
-`socialIconByLabel` in [src/components/SiteFooter.astro](./src/components/SiteFooter.astro). The
-bundled icons come from Bootstrap Icons and keep their MIT license notice in the icon folder.
+Share icons are local SVGs in [src/icons/bootstrap](./src/icons/bootstrap), rendered
+through [src/components/LocalIcon.astro](./src/components/LocalIcon.astro). To add an icon, drop
+its SVG in that folder and register it in `LocalIcon.astro`. The bundled icons come from Bootstrap
+Icons and keep their MIT license notice in the icon folder.
 
 ## Pages
 

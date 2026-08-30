@@ -13,7 +13,7 @@ Monograph is a free Astro theme for essays, notes, and long-form writing. It is 
 
 ## Features
 
-- Text-first front page: a large latest post, a whitespace-separated feed with no thumbnails, and a sticky sidebar holding the about blurb, a subscribe form, featured posts, and categories with post counts
+- Text-first front page: a large latest post, a whitespace-separated feed with no thumbnails, and a sticky sidebar holding the about blurb, a subscribe form, and categories with post counts
 - Article pages with a single 720px reading column, a byline that reads "By author in category", a share row above the feature image, copy-link, previous/next navigation, and related posts
 - Categories as the only taxonomy: one short configured list, a `/categories/` index with descriptions and counts, and a generated archive per category
 - Author, archive, search, about, contact, privacy, and 404 pages, plus RSS, sitemap, and `robots.txt`
@@ -22,7 +22,7 @@ Monograph is a free Astro theme for essays, notes, and long-form writing. It is 
 - Read time calculated from the post body at build time, so nothing to maintain by hand
 - Markdown and MDX content powered by Astro content collections, with dual light/dark syntax-highlighted code blocks (plus a copy button), styled lists, and blockquotes
 - Reusable MDX content components — `Callout` (note/tip/warning/danger) and tabbed `CodeGroup` code samples — available in any post with no imports
-- Frontmatter validation for titles, excerpts, categories, dates, authors, covers, featured, and drafts
+- Frontmatter validation for titles, excerpts, categories, dates, authors, covers, and drafts
 - Sticky header that hides while scrolling down and slides back in on the way up
 - Restrained hover motion on one easing curve: titles pick up the accent, inline links wipe an underline in, arrows lean toward their destination, and icon buttons lift
 - Optional feature images, capped in height and shown on the post only, never in a feed
@@ -83,7 +83,6 @@ cover: # optional; shown on the post, never in the feed
   alt: "Soft gradient mesh"
   creditName: "Credits to Codioful via Unsplash"
   creditUrl: "https://unsplash.com/photos/..."
-featured: false # true lists it in the home sidebar
 draft: false
 ---
 ```
@@ -100,7 +99,7 @@ automatically.
 
 | Route                                                           | Page                           |
 | --------------------------------------------------------------- | ------------------------------ |
-| `/`                                                             | Latest post, feed, and sidebar |
+| `/`, `/page/<n>/`                                               | Paginated home feed and sidebar |
 | `/posts/[page]`                                                 | Paginated archive              |
 | `/post/<slug>/`                                                 | Article                        |
 | `/categories/`                                                  | Category index with counts     |

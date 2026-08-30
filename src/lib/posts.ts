@@ -37,10 +37,29 @@ export const readingLabel = (post: Post) => `${readingMinutes(post)} 分钟阅�
 
 export const postsLabel = (count: number) => `${count} 篇`;
 
-export const getFeatured = (posts: Post[], limit = 5) =>
-  visiblePosts(posts)
-    .filter((post) => post.data.featured)
-    .slice(0, limit);
+/** Posts per page on the home feed. Later pages live at `/page/<n>/`. */
+export const homePageSize = 8;
+
+export const withTrailingSlash = (url: string | undefined) =>
+  url && !url.endsWith("/") ? `${url}/` : url;
+
+export const homePageHref = (page: number) => (page <= 1 ? "/" : `/page/${page}/`);
+
+export const paginatePosts = (posts: Post[], pageSize: number, currentPage: number) => {
+  const total = posts.length;
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(currentPage, 1), lastPage);
+  const start = (safePage - 1) * pageSize;
+
+  return {
+    data: posts.slice(start, start + pageSize),
+    currentPage: safePage,
+    lastPage,
+    total,
+    prevUrl: safePage > 1 ? homePageHref(safePage - 1) : undefined,
+    nextUrl: safePage < lastPage ? homePageHref(safePage + 1) : undefined,
+  };
+};
 
 export const getPostsByCategory = (posts: Post[], category: string) =>
   visiblePosts(posts).filter((post) => post.data.category === category);

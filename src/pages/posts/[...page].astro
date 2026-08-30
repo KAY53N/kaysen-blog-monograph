@@ -1,12 +1,13 @@
 ---
 import { getCollection } from "astro:content";
 import type { GetStaticPaths, Page } from "astro";
+import Pagination from "@/components/Pagination.astro";
 import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { siteConfig } from "@/config/site";
-import { visiblePosts, type Post } from "@/lib/posts";
+import { visiblePosts, withTrailingSlash, type Post } from "@/lib/posts";
 
 export const getStaticPaths = (async ({ paginate }) => {
   const posts = visiblePosts(await getCollection("posts"));
@@ -21,7 +22,6 @@ const { page } = Astro.props;
 const allPosts = visiblePosts(await getCollection("posts"));
 const title = page.currentPage === 1 ? "归档" : `归档 - 第 ${page.currentPage} 页`;
 const description = `${siteConfig.name} 已发布的全部文章。`;
-const withTrailingSlash = (url: string | undefined) => (url && !url.endsWith("/") ? `${url}/` : url);
 const prevUrl = withTrailingSlash(page.url.prev);
 const nextUrl = withTrailingSlash(page.url.next);
 ---
@@ -42,29 +42,13 @@ const nextUrl = withTrailingSlash(page.url.next);
         {page.data.map((post) => <PostCard post={post} />)}
       </div>
 
-      <nav class="mt-16 flex items-center justify-between gap-4 border-t border-border pt-6" aria-label="归档分页">
-        {
-          prevUrl ? (
-            <a href={prevUrl} class="nav-link link-nudge">
-              <span class="link-nudge__arrow link-nudge__arrow--prev">&larr;</span> 更新
-            </a>
-          ) : (
-            <span class="nav-link opacity-40">&larr; 更新</span>
-          )
-        }
-        <span class="text-xs tracking-widest text-muted-foreground uppercase">
-          {page.currentPage} / {page.lastPage}
-        </span>
-        {
-          nextUrl ? (
-            <a href={nextUrl} class="nav-link link-nudge">
-              更早 <span class="link-nudge__arrow link-nudge__arrow--next">&rarr;</span>
-            </a>
-          ) : (
-            <span class="nav-link opacity-40">更早 &rarr;</span>
-          )
-        }
-      </nav>
+      <Pagination
+        currentPage={page.currentPage}
+        lastPage={page.lastPage}
+        prevUrl={prevUrl}
+        nextUrl={nextUrl}
+        label="归档分页"
+      />
     </div>
   </main>
   <SiteFooter />

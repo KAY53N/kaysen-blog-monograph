@@ -1,0 +1,35 @@
+---
+interface Props {
+  currentPage: number;
+  lastPage: number;
+  prevUrl?: string;
+  nextUrl?: string;
+  label?: string;
+}
+
+const { currentPage, lastPage, prevUrl, nextUrl, label = "分页" } = Astro.props;
+---
+
+<nav class="mt-16 flex items-center justify-between gap-4 border-t border-border pt-6" aria-label={label}>
+  {
+    prevUrl ? (
+      <a href={prevUrl} class="nav-link link-nudge">
+        <span class="link-nudge__arrow link-nudge__arrow--prev">&larr;</span> 更新
+      </a>
+    ) : (
+      <span class="nav-link opacity-40">&larr; 更新</span>
+    )
+  }
+  <span class="text-xs tracking-widest text-muted-foreground uppercase">
+    {currentPage} / {lastPage}
+  </span>
+  {
+    nextUrl ? (
+      <a href={nextUrl} class="nav-link link-nudge">
+        更早 <span class="link-nudge__arrow link-nudge__arrow--next">&rarr;</span>
+      </a>
+    ) : (
+      <span class="nav-link opacity-40">更早 &rarr;</span>
+    )
+  }
+</nav>

@@ -29,8 +29,6 @@ const posts = defineCollection({
           creditUrl: z.url().optional(),
         })
         .optional(),
-      /** Surfaces the post in the "Featured" list in the home sidebar. */
-      featured: z.boolean().default(false),
       draft: z.boolean().default(false),
     }),
 });
