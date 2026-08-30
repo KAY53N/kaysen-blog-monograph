@@ -89,7 +89,7 @@ const structuredData = {
 >
   <SiteHeader posts={allPosts} />
   <main id="content" class="outer">
-    <article>
+    <article class="article">
       <header class="canvas pt-10 md:pt-14">
         <p class="meta post-meta">
           <span class="post-meta__byline">
@@ -138,7 +138,7 @@ const structuredData = {
       </header>
 
       {data.cover && (
-        <figure class="article-image inner">
+        <figure class="article-image canvas">
           <Image
             src={data.cover.src}
             alt={data.cover.alt}
@@ -264,6 +264,11 @@ const structuredData = {
   </script>
 
   <style>
+    .article {
+      max-width: 100%;
+      overflow-x: clip;
+    }
+
     .post-meta {
       column-gap: 0.55rem;
     }
@@ -324,21 +329,19 @@ const structuredData = {
       text-wrap: pretty;
     }
 
-    /* Only the block margins are set here: the inline `auto` margins come from
-       `.inner` and must survive, or the wide feature image stops centering. */
     .article-image {
       margin-top: 3rem;
       margin-bottom: 0;
     }
 
-    /* Capped so an unusually tall cover cannot push the article's first
-       paragraph below the fold. */
     .article-image :global(img) {
-      max-height: 32rem;
+      display: block;
       width: 100%;
       max-width: 100%;
       height: auto;
-      object-fit: cover;
+      max-height: 32rem;
+      object-fit: contain;
+      object-position: center;
       border-radius: var(--radius-md);
     }
 
