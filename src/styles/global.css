@@ -71,7 +71,7 @@
     Menlo, "Liberation Mono", monospace;
 
   --layout-wide: 75rem;
-  --layout-content: 45rem;
+  --layout-content: 1000px;
   --gutter: 1.5rem;
   --space-section: clamp(4rem, 8vw, 7.5rem);
 
@@ -796,7 +796,7 @@
   .prose video {
     display: block;
     max-width: 100%;
-    width: auto;
+    width: 100%;
     height: auto;
     margin: 1.75rem 0;
     border: 1px solid var(--border);
@@ -931,14 +931,22 @@
 }
 
 /*
- * Markdown images keep their source pixel width as an HTML attribute
- * (often 1000px+). That presentational hint can outgrow the 45rem reading
- * column. Unlayered + !important so it wins over the attribute and Tailwind.
+ * Unlayered so these beat @layer components and HTML width attributes.
+ * Do not set max-width on `.prose` itself: `.prose.canvas` used to
+ * override the 1000px reading column with max-width: 100% of the page.
  */
-.prose,
+.canvas {
+  max-width: var(--layout-content);
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+
 .prose p,
 .prose figure,
-.prose picture {
+.prose picture,
+.prose pre,
+.prose .code-copy-frame {
   max-width: 100%;
   min-width: 0;
 }
@@ -949,7 +957,7 @@
 .article-image img {
   display: block;
   max-width: 100% !important;
-  width: auto !important;
+  width: 100% !important;
   height: auto !important;
   box-sizing: border-box;
 }

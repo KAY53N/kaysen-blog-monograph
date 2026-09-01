@@ -162,8 +162,10 @@ const structuredData = {
         </figure>
       )}
 
-      <div class="prose canvas mt-12">
-        <Content components={mdxComponents} />
+      <div class="canvas mt-12">
+        <div class="prose">
+          <Content components={mdxComponents} />
+        </div>
       </div>
 
       {(newer || older) && (
@@ -339,7 +341,6 @@ const structuredData = {
       width: 100%;
       max-width: 100%;
       height: auto;
-      max-height: 32rem;
       object-fit: contain;
       object-position: center;
       border-radius: var(--radius-md);
