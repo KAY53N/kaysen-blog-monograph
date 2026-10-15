@@ -1,8 +1,9 @@
 ---
-title: "OpenResty 用 Durpina 做滚动发布"
-excerpt: "滚动发版先把 upstream 节点 down 掉，再换代码、重启 supervisord。加减机器则改 nginx.conf，reload 之后跑管理脚本 sync。客户请求不会打到正在重启的那台。"
+title: "OpenResty 用 Durpina 做滚动重启和发布"
+excerpt: "滚动重启按批摘流、重启 supervisord 再挂回。滚动发布先同步新目录，再摘流、切软链、重启，由 Jenkins 调 Ansible。加减机器才改 nginx.conf 并 reload。"
 category: "Reliability"
 date: 2026-09-20
+updatedDate: 2026-10-15
 author:
   name: "Kaysen"
   role: "安全与可靠性"
@@ -11,11 +12,12 @@ cover:
   alt: "机柜里一束网线从主干分到多条链路"
 ---
 
-滚动发布要重启的是后端进程，不是 Nginx。一台机器换新代码、`supervisord` 拉起新进程的那几秒里，端口会断、旧连接会掉。如果 Nginx 这时还把请求打过去，客户看到的就是 502、连接拒绝、偶发超时。
+滚动重启和滚动发布要动的都是后端进程，不是 Nginx。`supervisord` 拉起进程的那几秒里，端口会断、旧连接会掉。Nginx 这时还把请求打过去，客户看到的就是 502、连接拒绝、偶发超时。
 
-两件事不要混：
+三件事不要混：
 
-- **滚动发版**：先把这台从 upstream 里 `down` 掉，再换代码、重启 `supervisord`，探活通过后再 `up`。这一步不 reload Nginx。
+- **滚动重启**：不换代码。按批把这批机器从 upstream 里 `down` 掉，`supervisorctl restart`，端口起来后再 `up`。
+- **滚动发布**：先把新版本目录同步到所有机器，再按批 `down`、切软链、重启、`up`。Jenkins 的 Execute shell 调 Ansible。
 - **加减机器**：先改 `nginx.conf` 里的 `server`，再 `nginx -s reload`，再跑管理脚本的 `sync`，让 Durpina 的 peer 列表跟当前 conf 对齐。
 
 [Durpina](https://github.com/slact/durpina) 负责运行时改 peer 的 `up` / `down`。它是 OpenResty 上的动态 upstream 库，全称 Dynamic Upstream Reverse Proxying with Nice API，从 toruneko 的 `lua-resty-upstream` 分出来。peer 状态进 `lua_shared_dict`，`balancer_by_lua` 每次选后端时读这份状态。管理口只留探活、看节点、改状态、和 `nginx.conf` 对齐、一键全开。日常操作不手搓 curl，包一层 `durpina-manager.sh`。
@@ -68,21 +70,27 @@ http {
 
 ### http：共享内存和初始化
 
-Durpina **必须**在 `init_worker_by_lua` 里调用 `Upstream.init`。共享内存名字要和这里一致。1m 对小集群够用，节点多、还要存监控信息时可以开到 10m。
+`durpina-http.conf` 放在 http 级。`lua_package_path` 指向 `opm` 装出来的 `resty_modules`，worker 才能 `require "durpina.upstream"`。Durpina **必须**在 `init_worker_by_lua` 里调用 `Upstream.init`，参数是共享内存的名字，要和 `lua_shared_dict` 一致。这里用 `durpina_upstream`，10m。后端全是 IPv4 直连，不传 `resolver`。
 
 ```nginx
-lua_shared_dict upstream 10m;
+lua_package_path
+    "/usr/local/openresty/nginx/resty_modules/lualib/?.lua;/usr/local/openresty/nginx/resty_modules/lualib/?/init.lua;;";
+
+lua_shared_dict durpina_upstream 10m;
+
 lua_socket_log_errors off;
 
 init_worker_by_lua_block {
     local Upstream = require "durpina.upstream"
-    Upstream.init("upstream", {
-        resolver = "8.8.8.8"
-    })
+    Upstream.init("durpina_upstream")
 }
 ```
 
-全是 IPv4 直连、不靠 hostname 解析的话，`resolver` 可以不写。`lua_socket_log_errors off` 是 Durpina 文档里的建议：peer 探活失败时不要把 error log 刷满。
+`lua_socket_log_errors off` 是 Durpina 文档里的建议：peer 探活失败时不要把 error log 刷满。
+
+OpenResty 一个 master 带多个 worker。每个 worker 有自己的 Lua 虚拟机，进程内的局部变量互不相通。`lua_shared_dict` 是 master 建出来的一块 mmap 内存，所有 worker 映射的是同一份。`init_worker_by_lua` 每个 worker 启动时都会跑，`Upstream.init("durpina_upstream")` 绑的就是这块 dict。
+
+`peer:set_state("down")` 底层是 `shdict:set(down 的 key, true)`。管理口的请求只会落到其中一个 worker，但写进共享内存之后，别的 worker 下一次 `balancer_by_lua` 选路时 `is_down` 读到的也是这个 key。所以不用逐个通知、也不用 reload，所有 worker 都会跳过这台。返回里的 `worker_id` / `worker_pid` 只说明这次请求打到了哪个进程，不是「只改了这一个进程」。
 
 ### upstream：把选路交给 Lua
 
@@ -103,11 +111,11 @@ balancer_by_lua_block {
 ```nginx
 server {
     listen 127.0.0.1:18081;
-    listen 10.0.0.10:18081;
+    listen 172.31.1.197:18081;
     server_name localhost 127.0.0.1;
 
     allow 127.0.0.1;
-    allow 10.0.0.20;
+    allow 172.31.1.214;
     deny all;
 
     access_log /data/log/nginx/access.durpina.log json_combined;
@@ -150,7 +158,7 @@ server {
 | `/durpina/sync?upstream=` | POST | 用 nginx 静态 server 列表对齐 Durpina |
 | `/durpina/enable-all?upstream=` | POST | 该 upstream 全部设为 `up` |
 
-返回里都带 `worker_id`、`worker_pid`。Durpina 的 `set_state` 走共享内存，打到任意 worker 都应该生效；worker 字段是为了对照 error log，不是「只改了这一个进程」。
+返回里都带 `worker_id`、`worker_pid`。用来对照 error log。状态在共享内存里，打到任意 worker 都对所有进程生效。
 
 ### ping
 
@@ -744,10 +752,10 @@ main "$@"
 
 ## 滚动发布
 
-对 `upstream` 里的每一台，顺序固定。先 `down`，确认 balancer 不再选它，再换代码、重启 `supervisord`。
+对 `upstream` 里的每一台，顺序固定。先 `down`，确认 balancer 不再选它，再动这台机器，探活通过后再 `up`。滚动重启只拉起进程。滚动发布还要把软链切到已经同步好的新目录。下面这段是手工滚一台时的样子，Ansible 按同一顺序包成两份剧本。
 
 ```
-down → 换代码 → supervisorctl restart → 探活 → up → 下一台
+down → 换代码（发布才有）→ supervisorctl restart → 探活 → up → 下一台
 ```
 
 这一步**不 reload Nginx**。要重启的是这台机器上的应用进程。客户请求一直打在还 `up` 的节点上，不会打到正在重启的那台，所以不会因为这次发版出现报错或请求不通。
@@ -770,7 +778,7 @@ NODE=10.0.0.11:8080
 
 等价的 curl 是 `POST /durpina/set?...&action=down`。脚本只是把这组请求和校验包起来。`status` 里还不是 `down`，就不要重启这台的 supervisord。
 
-开始前用 `list` 看剩下的 `up` 能不能扛住少一台之后的流量。扛不住就先扩容，不要硬滚。一台异常就停。
+开始前用 `list` 看剩下的 `up` 能不能扛住少一台之后的流量。扛不住就先扩容，不要硬滚。手工滚时一台异常就停。Ansible 允许单台失败后继续，失败记日志，并尝试把这台挂回。
 
 整机多个端口时，把该 IP 下每个 `name` 都 `down` 一遍，再动 supervisord。只摘一个端口、同机另一个端口还在 `up`，重启时仍可能伤到那条端口上的请求。
 
@@ -783,6 +791,509 @@ NODE=10.0.0.11:8080
 ```
 
 `enable-all` 是「把人设的 down 清掉」，不是「把坏掉的机器救活」。
+
+## 滚动重启
+
+不换代码。playbook 把 `openapiserver_group` 里的机器按 `serial` 分批处理，默认一批 5 台。`-f` 只提高 Ansible 的并发连接数，一批几台仍由 `serial` 决定。
+
+Durpina 的请求都 `delegate_to: localhost`，从跑 playbook 的控制机访问管理口 `http://172.31.1.197:18081`。管理口的 `allow` 要放行这台控制机，前面的例子是 `172.31.1.214`。节点名用这台机器的默认 IPv4，加上 inventory 里的 `upstream_ports`。它可以是列表，也可以是逗号分隔的字符串。拼出来的 `IP:PORT` 必须和 `nginx.conf` 里的 `server` 一致。
+
+```ini
+[openapiserver_group]
+10.0.0.11 upstream_ports=8080
+10.0.0.12 upstream_ports=8080
+10.0.0.13 upstream_ports=8080
+```
+
+一台失败不让整批停下：`any_errors_fatal: false`。失败的那台进入 rescue，把错误追加到 `/var/log/openapiserver-rolling-restart-error.log`，再尝试 `action=up`，然后继续其他机器。rescue 里的任务都成功时，这台机器不算 play 失败。收尾在控制机上打一次 `info`。还有非 `up` 节点就再记一行日志，playbook 仍以 0 退出。`ansible_failed_result` 只在 rescue 里有定义，所以收尾用 `register` 判断要不要写日志。
+
+另一批机器复制这份剧本，改 `hosts`、`durpina_admin_url` 和错误日志路径。
+
+`openapi-rolling-restart.yml`：
+
+```yaml
+---
+- name: Openapiserver Durpina rolling restart
+  hosts: openapiserver_group
+  gather_facts: true
+  serial: "{{ rolling_batch_size | default(5) }}"
+  any_errors_fatal: false
+  vars:
+    durpina_admin_url: "http://172.31.1.197:18081"
+    durpina_upstream: "openapiserver-group"
+    drain_seconds: 5
+    startup_timeout: 120
+    durpina_timeout: 10
+    error_log: "/var/log/openapiserver-rolling-restart-error.log"
+
+  tasks:
+    - name: 设置应用 IP
+      set_fact:
+        app_ip: "{{ ansible_default_ipv4.address }}"
+
+    - name: 解析应用端口
+      set_fact:
+        app_ports: "{{ upstream_ports if (upstream_ports is sequence and upstream_ports is not string) else (upstream_ports | string).split(',') | map('trim') | reject('equalto', '') | list }}"
+
+    - name: 生成 Durpina 节点列表
+      set_fact:
+        durpina_nodes: "{{ app_ports | map('regex_replace', '^(.*)$', app_ip + ':\\1') | list }}"
+
+    - name: 输出当前节点信息
+      debug:
+        msg: "开始处理 {{ inventory_hostname }} ({{ app_ip }}) → 节点: {{ durpina_nodes | join(', ') }}"
+
+    - name: 滚动重启主流程
+      block:
+        - name: 检查 Durpina 接口
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/ping"
+            method: GET
+            return_content: true
+            timeout: "{{ durpina_timeout }}"
+          delegate_to: localhost
+          register: durpina_ping
+          failed_when: durpina_ping.status != 200
+
+        - name: 下线 Durpina 节点
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=down"
+            method: POST
+            status_code: [200]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes }}"
+          delegate_to: localhost
+          no_log: true
+
+        - name: 等待连接释放
+          pause:
+            seconds: "{{ drain_seconds }}"
+
+        - name: 重启 Openapiserver
+          shell: supervisorctl restart 'openapiserver:*'
+          register: restart_result
+          failed_when: restart_result.rc != 0
+
+        - name: 等待应用端口启动
+          wait_for:
+            host: "{{ app_ip }}"
+            port: "{{ item }}"
+            state: started
+            timeout: "{{ startup_timeout }}"
+          loop: "{{ app_ports }}"
+          register: wait_result
+          no_log: true
+
+        - name: 端口启动结果
+          debug:
+            msg: "{{ inventory_hostname }} 端口 {{ item.item }} 已启动"
+          loop: "{{ wait_result.results }}"
+          when: item is succeeded
+          loop_control:
+            label: "{{ item.item }}"
+
+        - name: 恢复 Durpina 节点
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=up"
+            method: POST
+            status_code: [200]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes }}"
+          delegate_to: localhost
+          no_log: true
+
+        - name: 等待 Durpina 状态同步
+          pause:
+            seconds: 3
+
+        - name: 查询恢复后 Durpina 状态
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/info?upstream={{ durpina_upstream }}"
+            method: GET
+            return_content: true
+            timeout: "{{ durpina_timeout }}"
+          delegate_to: localhost
+          register: _durpina_raw
+          no_log: true
+
+        - name: 提取当前节点状态
+          set_fact:
+            current_peers: "{{ _durpina_raw.json.upstream.peers | selectattr('name', 'in', durpina_nodes) | list }}"
+          no_log: true
+
+        - name: 检查当前节点是否恢复 up
+          assert:
+            that:
+              - item.state == "up"
+            fail_msg: "Durpina 节点未恢复: {{ item.name }}"
+            success_msg: "Durpina 节点已恢复: {{ item.name }}"
+          loop: "{{ current_peers }}"
+          loop_control:
+            label: "{{ item.name }}"
+          delegate_to: localhost
+
+        - name: 本批完成
+          debug:
+            msg: "{{ inventory_hostname }} 重启成功"
+
+      rescue:
+        - name: 记录失败信息
+          lineinfile:
+            path: "{{ error_log }}"
+            line: "{{ ansible_date_time.iso8601 }} | FAILED | {{ inventory_hostname }} | {{ ansible_failed_task.name | default('unknown') }} | {{ ansible_failed_result.msg | default(ansible_failed_result | string) | truncate(300) }}"
+            create: yes
+            mode: "0644"
+          delegate_to: localhost
+          ignore_errors: true
+
+        - name: 失败后尝试把节点重新上线
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=up"
+            method: POST
+            status_code: [200, 400, 500]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes | default([]) }}"
+          delegate_to: localhost
+          no_log: true
+          ignore_errors: true
+
+        - name: 标记本机失败并继续
+          debug:
+            msg: "{{ inventory_hostname }} 重启失败，已跳过，继续处理其他主机"
+          failed_when: false
+
+- name: Openapiserver Durpina final check
+  hosts: localhost
+  gather_facts: false
+  vars:
+    durpina_admin_url: "http://172.31.1.197:18081"
+    durpina_upstream: "openapiserver-group"
+    error_log: "/var/log/openapiserver-rolling-restart-error.log"
+  tasks:
+    - name: 查询最终 Durpina 状态
+      uri:
+        url: "{{ durpina_admin_url }}/durpina/info?upstream={{ durpina_upstream }}"
+        method: GET
+        return_content: true
+        timeout: 10
+      register: final_durpina
+      no_log: true
+
+    - name: 检查是否存在非 up 节点
+      assert:
+        that:
+          - >
+            (
+              final_durpina.json.upstream.peers
+              | selectattr('state','ne','up')
+              | list
+              | length
+            ) == 0
+        fail_msg: "发现非 up 节点，请检查 Durpina 状态"
+        success_msg: "所有节点状态正常"
+      register: final_assert
+      ignore_errors: true
+
+    - name: 最终失败记录
+      lineinfile:
+        path: "{{ error_log }}"
+        line: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }} | FINAL_CHECK_FAILED | non-up peers remain"
+        create: yes
+        mode: "0644"
+      when: final_assert is failed
+      ignore_errors: true
+```
+
+`selectattr('name', 'in', durpina_nodes)` 对不上名字时，列表是空的，assert 的循环一次都不跑，单台检查会放过。节点名和 conf 不一致时，先看 `list`，不要只看这条成功。
+
+摘流和挂回加了 `no_log`。Ansible 输出里看不到 URL 和返回体，失败详情在错误日志里。
+
+## 滚动发布
+
+Jenkins 任务的 Build Steps 里选 Execute shell：
+
+```bash
+ansible-playbook /etc/ansible/playbooks/openapi-rolling-deploy.yml \
+  -e target_group=openapiserver_group \
+  -e backup_dir=${BACKUP_DIR} \
+  -e rolling_batch_size=5
+```
+
+`${BACKUP_DIR}` 是控制机上新版本目录的绝对路径。剧本分三段。
+
+第一段不摘流，也不切软链。`synchronize` 把这个目录推到每台机器的同一路径。`delete: true` 会删掉目标里多出来的文件，所以这个目录必须是完整版本树。控制机和业务机都要有 `rsync`。这一段失败的机器不会进入后面的滚动，软链还指着旧目录。
+
+第二段才按批滚动。集群变量放在 `group_vars/openapiserver_group.yml`，不要写进 play vars：
+
+```yaml
+durpina_admin_url: "http://172.31.1.197:18081"
+durpina_upstream: "openapiserver-group"
+link_path: "/srv/openapiserver/current"
+drain_seconds: 5
+startup_timeout: 120
+durpina_timeout: 10
+```
+
+`link_path` 换成机器上软链的真实路径。`upstream_ports` 仍是 host 变量，和滚动重启用同一份 inventory。
+
+每台的顺序是 `down`，等 `drain_seconds`，把 `link_path` 指向 `backup_dir`，`supervisorctl restart 'openapiserver:*'`，等端口，`up`，等 3 秒，再断言 `info` 里这台的 `state` 是 `up`。切软链和 `supervisorctl` 用 inventory 里的连接用户，这个用户要有这两项权限。
+
+切软链之后失败，剧本不会把软链切回旧目录。rescue 把失败写到 `/var/log/openapiserver-rolling-deploy-error.log`，然后最多再挂回两次，不给 `uri` 加 `retries`。单台失败继续下一台。要回到旧代码，就用旧目录再发一次。
+
+第三段在控制机上收尾。还有非 `up` 节点会记日志。每轮先记一个 `deploy_run_id`，失败行带上它。日志里只要有这一轮的 `FAILED`，playbook 就非 0 退出，Jenkins 能看出这次发布有机器没成。旧日志里的失败不会把后来的成功发布打红。
+
+`openapi-rolling-deploy.yml`：
+
+```yaml
+---
+- name: Stamp this deploy
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: 记录本轮编号
+      set_fact:
+        deploy_run_id: "{{ '%Y%m%d%H%M%S' | strftime }}"
+
+- name: Sync new directory without switching link or draining
+  hosts: "{{ target_group }}"
+  gather_facts: false
+  become: false
+  tasks:
+    - name: 要求用额外变量传入新版本目录
+      assert:
+        that:
+          - backup_dir is defined
+          - backup_dir is match('^/')
+        fail_msg: "用 -e backup_dir=/绝对路径 传入新版本目录"
+      run_once: true
+
+    - name: 把新版本目录推到相同绝对路径
+      ansible.builtin.synchronize:
+        src: "{{ backup_dir }}/"
+        dest: "{{ backup_dir }}/"
+        recursive: true
+        delete: true
+        mode: push
+
+- name: Rolling switch link and restart
+  hosts: "{{ target_group }}"
+  gather_facts: true
+  serial: "{{ rolling_batch_size | default(5) }}"
+  any_errors_fatal: false
+  vars:
+    error_log: "/var/log/openapiserver-rolling-deploy-error.log"
+  tasks:
+    - name: 确认集群变量来自 group_vars
+      assert:
+        that:
+          - durpina_admin_url is defined
+          - durpina_admin_url | length > 0
+          - durpina_upstream is defined
+          - link_path is defined
+          - drain_seconds is defined
+          - startup_timeout is defined
+          - durpina_timeout is defined
+          - backup_dir is defined
+        fail_msg: >-
+          缺少集群变量。确认 -e target_group 指向的组有
+          group_vars，并且这些变量没有被 play vars 盖掉。
+
+    - name: 设置应用 IP
+      set_fact:
+        app_ip: "{{ ansible_default_ipv4.address }}"
+
+    - name: 解析应用端口
+      set_fact:
+        app_ports: "{{ upstream_ports if (upstream_ports is sequence and upstream_ports is not string) else (upstream_ports | string).split(',') | map('trim') | reject('equalto', '') | list }}"
+
+    - name: 生成 Durpina 节点列表
+      set_fact:
+        durpina_nodes: "{{ app_ports | map('regex_replace', '^(.*)$', app_ip + ':\\1') | list }}"
+
+    - name: 滚动发布主流程
+      block:
+        - name: 检查 Durpina 接口
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/ping"
+            method: GET
+            return_content: true
+            timeout: "{{ durpina_timeout }}"
+          delegate_to: localhost
+          register: durpina_ping
+          failed_when: durpina_ping.status != 200
+
+        - name: 下线 Durpina 节点
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=down"
+            method: POST
+            status_code: [200]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes }}"
+          delegate_to: localhost
+          no_log: true
+
+        - name: 等待连接释放
+          pause:
+            seconds: "{{ drain_seconds }}"
+
+        - name: 把软链切到新目录
+          file:
+            src: "{{ backup_dir }}"
+            dest: "{{ link_path }}"
+            state: link
+            force: true
+
+        - name: 重启 Openapiserver
+          shell: supervisorctl restart 'openapiserver:*'
+          register: restart_result
+          failed_when: restart_result.rc != 0
+
+        - name: 等待应用端口启动
+          wait_for:
+            host: "{{ app_ip }}"
+            port: "{{ item }}"
+            state: started
+            timeout: "{{ startup_timeout }}"
+          loop: "{{ app_ports }}"
+          register: wait_result
+          no_log: true
+
+        - name: 恢复 Durpina 节点
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=up"
+            method: POST
+            status_code: [200]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes }}"
+          delegate_to: localhost
+          no_log: true
+
+        - name: 等待 Durpina 状态同步
+          pause:
+            seconds: 3
+
+        - name: 查询恢复后 Durpina 状态
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/info?upstream={{ durpina_upstream }}"
+            method: GET
+            return_content: true
+            timeout: "{{ durpina_timeout }}"
+          delegate_to: localhost
+          register: _durpina_raw
+          no_log: true
+
+        - name: 提取当前节点状态
+          set_fact:
+            current_peers: "{{ _durpina_raw.json.upstream.peers | selectattr('name', 'in', durpina_nodes) | list }}"
+          no_log: true
+
+        - name: 检查当前节点是否恢复 up
+          assert:
+            that:
+              - item.state == "up"
+            fail_msg: "Durpina 节点未恢复: {{ item.name }}"
+            success_msg: "Durpina 节点已恢复: {{ item.name }}"
+          loop: "{{ current_peers }}"
+          loop_control:
+            label: "{{ item.name }}"
+          delegate_to: localhost
+
+        - name: 本机发布成功
+          debug:
+            msg: "{{ inventory_hostname }} -> {{ backup_dir }}"
+
+      rescue:
+        - name: 记录失败信息
+          lineinfile:
+            path: "{{ error_log }}"
+            line: "{{ ansible_date_time.iso8601 }} run_id={{ hostvars['localhost'].deploy_run_id }} FAILED {{ inventory_hostname }} backup_dir={{ backup_dir }} target_group={{ target_group }} task={{ ansible_failed_task.name | default('unknown') }}"
+            create: yes
+            mode: "0644"
+          delegate_to: localhost
+          ignore_errors: true
+
+        - name: 失败后第 1 次挂回
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=up"
+            method: POST
+            status_code: [200]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes | default([]) }}"
+          delegate_to: localhost
+          no_log: true
+          ignore_errors: true
+
+        - name: 失败后第 2 次挂回
+          uri:
+            url: "{{ durpina_admin_url }}/durpina/set?upstream={{ durpina_upstream | urlencode }}&node={{ item | urlencode }}&action=up"
+            method: POST
+            status_code: [200]
+            timeout: "{{ durpina_timeout }}"
+          loop: "{{ durpina_nodes | default([]) }}"
+          delegate_to: localhost
+          no_log: true
+          ignore_errors: true
+
+        - name: 标记本机失败并继续
+          debug:
+            msg: "{{ inventory_hostname }} 发布失败，已跳过，继续处理其他主机"
+          failed_when: false
+
+- name: Openapiserver Durpina final check
+  hosts: localhost
+  gather_facts: false
+  vars:
+    durpina_admin_url: "http://172.31.1.197:18081"
+    durpina_upstream: "openapiserver-group"
+    error_log: "/var/log/openapiserver-rolling-deploy-error.log"
+  tasks:
+    - name: 查询最终 Durpina 状态
+      uri:
+        url: "{{ durpina_admin_url }}/durpina/info?upstream={{ durpina_upstream }}"
+        method: GET
+        return_content: true
+        timeout: 10
+      register: final_durpina
+      no_log: true
+
+    - name: 检查是否存在非 up 节点
+      assert:
+        that:
+          - >
+            (
+              final_durpina.json.upstream.peers
+              | selectattr('state','ne','up')
+              | list
+              | length
+            ) == 0
+        fail_msg: "发现非 up 节点，请检查 Durpina 状态"
+        success_msg: "所有节点状态正常"
+      register: final_assert
+      ignore_errors: true
+
+    - name: 记录非 up 节点
+      lineinfile:
+        path: "{{ error_log }}"
+        line: "{{ lookup('pipe', 'date -u +%Y-%m-%dT%H:%M:%SZ') }} FINAL_CHECK_FAILED run_id={{ deploy_run_id }} non-up peers remain"
+        create: yes
+        mode: "0644"
+      when: final_assert is failed
+      ignore_errors: true
+
+    - name: 读取本轮失败记录
+      shell: grep -F "run_id={{ deploy_run_id }} FAILED" {{ error_log }} || true
+      args:
+        executable: /bin/bash
+      register: failed_marks
+      changed_when: false
+
+    - name: 本轮有失败则非 0 退出
+      fail:
+        msg: "{{ failed_marks.stdout }}"
+      when: "failed_marks.stdout | default('') | length > 0"
+```
+
+收尾这条 `grep` 查的是带 `FAILED` 的主机记录。非 `up` 的收尾行写的是 `FINAL_CHECK_FAILED`，不会被这句当成主机失败。两者都留在同一份日志里。
 
 ## 添加或移除节点
 
@@ -811,7 +1322,9 @@ nginx -t && nginx -s reload
 
 **先 down，再重启 supervisord。** 顺序反了，Nginx 还会把请求打到这台，客户就会在进程退出的窗口里看到报错或不通。
 
-**加减机器是改 conf → reload → sync，不是 down/up。** 滚动发版不 reload Nginx。两套流程不要叠在一次变更里。
+**加减机器是改 conf → reload → sync。** 滚动重启和滚动发布不 reload Nginx。三套流程不要叠在一次变更里。
+
+**失败补偿会把节点标回 up。** 重启或切链没成功时，剧本仍尝试 `action=up`，避免机器被忘在 `down`。进程没起来的话，请求会打到死端口上。看错误日志，不要只看 playbook 退出码。滚动重启的收尾检查失败也是 0 退出。
 
 **`down` 和 `failing` 不是一回事。** `down` 是人设，balancer 跳过。`failing` 是 `fail_timeout` 窗口里失败次数超了，或 monitor 没过。enable-all 只能把 `down` 改回 `up`。节点马上又变成 `failing`，说明探活或真实请求仍在失败——常见原因是 supervisord 没起来、新代码起不来、或探活 URI 变了。
 
@@ -829,10 +1342,18 @@ nginx -t && nginx -s reload
 
 Durpina 不负责发版，也不负责健康检查。它只让 OpenResty 在不 reload 的前提下，把某几个 peer 从轮询里拿掉或放回去。
 
-滚动发版：
+滚动重启：
 
 ```
-down → 换代码 → supervisorctl restart → 探活 → up → 下一台
+openapi-rolling-restart.yml
+down → supervisorctl restart → 探活 → up → 下一批
+```
+
+滚动发布：
+
+```
+Jenkins → synchronize 新目录 → openapi-rolling-deploy.yml
+down → 切软链 → supervisorctl restart → 探活 → up → 下一批
 ```
 
 加减机器：
