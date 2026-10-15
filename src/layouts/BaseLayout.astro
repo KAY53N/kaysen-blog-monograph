@@ -1,4 +1,5 @@
 ---
+import BackToTop from "@/components/BackToTop.astro";
 import { siteConfig } from "@/config/site";
 import "@/styles/global.css";
 
@@ -131,5 +132,6 @@ const schema = structuredData ?? defaultStructuredData;
   <body>
     <a class="skip-link" href="#content">跳到正文</a>
     <slot />
+    <BackToTop />
   </body>
 </html>
