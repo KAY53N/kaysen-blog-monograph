@@ -1,8 +1,6 @@
 ---
-import { Image } from "astro:assets";
 import { getCollection, render } from "astro:content";
 import LocalIcon from "@/components/LocalIcon.astro";
-import PostCard from "@/components/PostCard.astro";
 import SiteFooter from "@/components/SiteFooter.astro";
 import SiteHeader from "@/components/SiteHeader.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
@@ -13,9 +11,9 @@ import { siteConfig } from "@/config/site";
 import {
   authorSlug,
   categoryHref,
+  categoryLabel,
   formatDate,
   getAdjacent,
-  getRelated,
   postHref,
   postSlug,
   readingLabel,
@@ -40,7 +38,6 @@ const { post, allPosts } = Astro.props;
 const { Content } = await render(post);
 const mdxComponents = { Callout, CodeGroup, CodeGroupItem };
 const data = post.data;
-const related = getRelated(allPosts, post);
 const { newer, older } = getAdjacent(allPosts, post);
 const authorHref = `/author/${authorSlug(data.author.name)}/`;
 const articleUrl = new URL(postHref(post), siteConfig.siteUrl).toString();
@@ -94,7 +91,7 @@ const structuredData = {
         <p class="meta post-meta">
           <span class="post-meta__byline">
             作者 <a href={authorHref} class="link-sweep post-meta__link">{data.author.name}</a>，分类{" "}
-            <a href={categoryHref(data.category)} class="link-sweep post-meta__link">{data.category}</a>
+            <a href={categoryHref(data.category)} class="link-sweep post-meta__link">{categoryLabel(data.category)}</a>
           </span>
           <span class="post-meta__dates">
             <span class="meta-accent"><time datetime={data.date.toISOString()}>{formatDate(data.date, "long")}</time></span>
@@ -103,7 +100,6 @@ const structuredData = {
         </p>
 
         <h1 class="article-title">{data.title}</h1>
-        <p class="article-excerpt">{data.excerpt}</p>
 
         {data.updatedDate && (
           <p class="meta mt-5">
@@ -136,31 +132,6 @@ const structuredData = {
           <p class="ml-1 text-xs text-muted-foreground" aria-live="polite" data-copy-status></p>
         </div>
       </header>
-
-      {data.cover && (
-        <figure class="article-image canvas">
-          <Image
-            src={data.cover.src}
-            alt={data.cover.alt}
-            widths={[640, 960, 1200, 1600, 2000]}
-            sizes="(min-width: 1200px) 1200px, 100vw"
-            loading="eager"
-            decoding="async"
-            class="w-full"
-          />
-          {data.cover.creditName && (
-            <figcaption>
-              {data.cover.creditUrl ? (
-                <a href={data.cover.creditUrl} rel="noreferrer" class="underline underline-offset-2">
-                  {data.cover.creditName}
-                </a>
-              ) : (
-                data.cover.creditName
-              )}
-            </figcaption>
-          )}
-        </figure>
-      )}
 
       <div class="canvas mt-12">
         <div class="prose">
@@ -195,15 +166,6 @@ const structuredData = {
         </footer>
       )}
     </article>
-
-    {related.length > 0 && (
-      <section class="canvas mt-[var(--space-section)]" aria-labelledby="keep-reading">
-        <h2 id="keep-reading" class="section-title">继续阅读</h2>
-        <div class="grid gap-7">
-          {related.map((item) => <PostCard post={item} variant="compact" headingLevel="h3" />)}
-        </div>
-      </section>
-    )}
   </main>
   <SiteFooter />
 
@@ -321,36 +283,6 @@ const structuredData = {
       line-height: 1.02;
       text-wrap: balance;
       word-break: break-word;
-    }
-
-    .article-excerpt {
-      margin: 1.25rem 0 0;
-      color: color-mix(in srgb, var(--foreground) 82%, transparent);
-      font-size: clamp(1.125rem, 2.4vw, 1.4rem);
-      line-height: 1.45;
-      text-wrap: pretty;
-    }
-
-    .article-image {
-      margin-top: 3rem;
-      margin-bottom: 0;
-    }
-
-    .article-image :global(img) {
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      height: auto;
-      object-fit: contain;
-      object-position: center;
-      border-radius: var(--radius-md);
-    }
-
-    .article-image figcaption {
-      max-width: var(--layout-content);
-      margin: 0.75rem auto 0;
-      color: var(--muted-foreground);
-      font-size: 0.8125rem;
     }
 
     .share-btn {

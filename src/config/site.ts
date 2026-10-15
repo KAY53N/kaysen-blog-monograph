@@ -11,7 +11,6 @@ export const siteConfig = {
   dateLocale: "zh-CN",
   locale: "zh_CN",
   socialImage: "/og-image.png",
-  /** Shown in the home sidebar "About" card. */
   about: "kaysen.dev 是一个以阅读为先的站点。关于构建软件的笔记，有值得写下的内容时才会发布。",
   /**
    * Both forms below ship enabled with an empty `action`, which makes them fully
@@ -37,14 +36,7 @@ export const siteConfig = {
 
 /** Header navigation. Add or remove entries freely; the header renders them in order. */
 export const navigation = [
-  { label: "归档", href: "/posts/" },
-  { label: "分类", href: "/categories/" },
-  { label: "关于", href: "/about/" },
-];
-
-/** Secondary navigation rendered in the footer. */
-export const footerNavigation = [
-  { label: "联系", href: "/contact/" },
-  { label: "隐私", href: "/privacy/" },
-  { label: "RSS", href: "/rss.xml" },
+  { label: "Archive", href: "/posts/" },
+  { label: "Categories", href: "/categories/" },
+  { label: "About", href: "/about/" },
 ];

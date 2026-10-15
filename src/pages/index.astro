@@ -14,7 +14,6 @@ const page = paginatePosts(allPosts, homePageSize, 1);
   <SiteHeader posts={allPosts} />
   <HomeFeed
     feed={page.data}
-    allPosts={allPosts}
     currentPage={page.currentPage}
     lastPage={page.lastPage}
     prevUrl={page.prevUrl}

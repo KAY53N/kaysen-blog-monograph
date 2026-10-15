@@ -69,63 +69,14 @@ const schema = structuredData ?? defaultStructuredData;
     <meta name="twitter:image" content={absoluteImage} />
     <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />
     <script is:inline>
-      /*
-       * Runs before first paint so the stored reading mode is applied without a
-       * flash. Falls back to the system preference until the reader picks a side.
-       */
       (() => {
-        const storageKey = "monograph-theme";
         const root = document.documentElement;
         const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-        let storedTheme;
-
-        try {
-          storedTheme = localStorage.getItem(storageKey);
-        } catch {
-          storedTheme = null;
-        }
-
-        const updateToggles = (theme) => {
-          const isDark = theme === "dark";
-          document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-            button.setAttribute("aria-checked", String(isDark));
-            button.setAttribute("aria-label", isDark ? "切换到浅色模式" : "切换到深色模式");
-          });
+        const apply = (dark) => {
+          root.dataset.theme = dark ? "dark" : "light";
         };
-
-        const setTheme = (theme, persist = false) => {
-          root.dataset.theme = theme;
-          if (persist) {
-            storedTheme = theme;
-            try {
-              localStorage.setItem(storageKey, theme);
-            } catch {}
-          }
-          updateToggles(theme);
-        };
-
-        const preferredTheme =
-          storedTheme === "light" || storedTheme === "dark"
-            ? storedTheme
-            : systemDark.matches
-              ? "dark"
-              : "light";
-
-        setTheme(preferredTheme);
-
-        systemDark.addEventListener("change", (event) => {
-          if (storedTheme === "light" || storedTheme === "dark") return;
-          setTheme(event.matches ? "dark" : "light");
-        });
-
-        window.addEventListener("DOMContentLoaded", () => {
-          updateToggles(root.dataset.theme || preferredTheme);
-          document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-            button.addEventListener("click", () => {
-              setTheme(root.dataset.theme === "dark" ? "light" : "dark", true);
-            });
-          });
-        });
+        apply(systemDark.matches);
+        systemDark.addEventListener("change", (event) => apply(event.matches));
       })();
     </script>
   </head>

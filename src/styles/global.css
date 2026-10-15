@@ -204,23 +204,6 @@
     }
   }
 
-  /* Home sidebar: sticky beside the feed on wide screens, stacked below it on
-     narrow ones. */
-  .sidebar {
-    display: grid;
-    gap: 4rem;
-    align-content: start;
-  }
-
-  @media (min-width: 1024px) {
-    .sidebar {
-      position: sticky;
-      top: 4.5rem;
-      padding-left: 2.5rem;
-      border-left: 1px solid var(--border);
-    }
-  }
-
   /* Archive, topic, and author page headers. */
   .pagehead {
     padding-top: 3rem;
@@ -519,6 +502,49 @@
     color: var(--accent);
   }
 
+  .back-top-button {
+    position: fixed;
+    right: clamp(10px, 1.8vw, 22px);
+    bottom: clamp(72px, 9vh, 112px);
+    z-index: 70;
+    display: inline-grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    color: var(--accent-foreground);
+    background: var(--accent);
+    box-shadow: 0 14px 34px color-mix(in srgb, var(--accent) 20%, transparent);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    transition:
+      opacity 180ms var(--ease-out),
+      transform 180ms var(--ease-out),
+      box-shadow 180ms var(--ease-out);
+  }
+
+  .back-top-button.is-visible {
+    opacity: 0.46;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .back-top-button:hover,
+  .back-top-button:focus-visible {
+    opacity: 0.86;
+    box-shadow: 0 22px 52px color-mix(in srgb, var(--accent) 34%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .back-top-button svg {
+    width: 17px;
+    height: 17px;
+  }
+
   /* -------------------------------------------------------------- header --- */
   .site-header {
     position: sticky;
@@ -588,68 +614,6 @@
   .nav-link:focus-visible::after,
   .nav-link[aria-current="page"]::after {
     transform: scaleX(1);
-  }
-
-  /* ---------------------------------------------------------- theme switch --- */
-
-  /*
-   * A real switch rather than an icon button: the knob slides between the two
-   * ends and carries the icon for the mode you are currently in.
-   */
-  .theme-switch {
-    display: inline-flex;
-    width: 2.75rem;
-    height: 1.5rem;
-    flex: 0 0 auto;
-    align-items: center;
-    border: 1px solid var(--border);
-    background: var(--muted);
-    cursor: pointer;
-    padding: 0.125rem;
-    border-radius: var(--radius-full);
-    transition:
-      background-color var(--duration) var(--ease-out),
-      border-color var(--duration) var(--ease-out);
-  }
-
-  .theme-switch:hover {
-    border-color: var(--border-strong);
-  }
-
-  .theme-switch__knob {
-    display: grid;
-    width: 1.15rem;
-    height: 1.15rem;
-    place-items: center;
-    background: var(--background);
-    color: var(--foreground);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
-    border-radius: 50%;
-    transform: translateX(0);
-    transition: transform 0.32s var(--ease-out);
-  }
-
-  :root[data-theme="dark"] .theme-switch__knob {
-    transform: translateX(1.2rem);
-  }
-
-  .theme-switch__knob svg {
-    width: 0.7rem;
-    height: 0.7rem;
-  }
-
-  /* Show the icon for the active mode; the knob's position says which way the
-     switch will move next. */
-  .theme-icon-moon {
-    display: none;
-  }
-
-  :root[data-theme="dark"] .theme-icon-sun {
-    display: none;
-  }
-
-  :root[data-theme="dark"] .theme-icon-moon {
-    display: block;
   }
 
   html.has-open-menu,

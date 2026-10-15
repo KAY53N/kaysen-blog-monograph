@@ -1,9 +1,9 @@
 import type { CollectionEntry } from "astro:content";
-import { categories, categorySlug, type Category } from "@/config/categories";
+import { categories, categoryLabel, categorySlug, type Category } from "@/config/categories";
 import { siteConfig } from "@/config/site";
 
 export type Post = CollectionEntry<"posts">;
-export { categories, categorySlug, type Category };
+export { categories, categoryLabel, categorySlug, type Category };
 
 export const authorSlug = (author: string) =>
   author
@@ -38,7 +38,7 @@ export const readingLabel = (post: Post) => `${readingMinutes(post)} 分钟阅�
 export const postsLabel = (count: number) => `${count} 篇`;
 
 /** Posts per page on the home feed. Later pages live at `/page/<n>/`. */
-export const homePageSize = 8;
+export const homePageSize = 20;
 
 export const withTrailingSlash = (url: string | undefined) =>
   url && !url.endsWith("/") ? `${url}/` : url;
@@ -71,22 +71,12 @@ export const getCategoryList = (posts: Post[]) => {
   return categories
     .map((category) => ({
       name: category,
+      label: categoryLabel(category),
       slug: categorySlug(category),
       count: visible.filter((post) => post.data.category === category).length,
     }))
     .filter((entry) => entry.count > 0);
 };
-
-export const getRelated = (posts: Post[], current: Post, limit = 3) =>
-  visiblePosts(posts)
-    .filter((post) => post.id !== current.id)
-    .sort((a, b) => {
-      const sameCategory =
-        Number(b.data.category === current.data.category) -
-        Number(a.data.category === current.data.category);
-      return sameCategory || byNewest(a, b);
-    })
-    .slice(0, limit);
 
 /** Previous/next in publication order, matching the article footer navigation. */
 export const getAdjacent = (posts: Post[], current: Post) => {
