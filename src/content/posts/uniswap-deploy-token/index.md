@@ -1,7 +1,7 @@
 ---
 title: "Uniswap 交易所部署与发布代币"
 excerpt: "测试网走一遍：MetaMask 申请测试币，Remix 按工厂、路由、PAIR、ERC20 的顺序发合约，再改 Uniswap 前端里的路由地址，加流动性和兑换。"
-category: "Engineering"
+category: "Web3"
 date: 2025-01-24
 author:
   name: "Kaysen"

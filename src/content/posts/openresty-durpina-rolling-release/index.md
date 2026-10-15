@@ -12,13 +12,13 @@ cover:
   alt: "机柜里一束网线从主干分到多条链路"
 ---
 
-滚动重启和滚动发布要动的都是后端进程，不是 Nginx。`supervisord` 拉起进程的那几秒里，端口会断、旧连接会掉。Nginx 这时还把请求打过去，客户看到的就是 502、连接拒绝、偶发超时。
+滚动重启和滚动发布，解决的是发版、重启窗口里用户请求报错。`supervisord` 拉起进程的那几秒，端口会断、旧连接会掉。这时 OpenResty 还把流量打过去，用户就会看到 502、连接拒绝、偶发超时。先从 upstream 里把机器 `down` 掉再动进程，这两种方式对用户侧都可以做到 0 报错。作者在线上实测过，有效。
 
 三件事不要混：
 
 - **滚动重启**：不换代码。按批把这批机器从 upstream 里 `down` 掉，`supervisorctl restart`，端口起来后再 `up`。
 - **滚动发布**：先把新版本目录同步到所有机器，再按批 `down`、切软链、重启、`up`。Jenkins 的 Execute shell 调 Ansible。
-- **加减机器**：先改 `nginx.conf` 里的 `server`，再 `nginx -s reload`，再跑管理脚本的 `sync`，让 Durpina 的 peer 列表跟当前 conf 对齐。
+- **加减机器**：先改 `nginx.conf` 里的 `server`，再 `openresty -s reload`，再跑管理脚本的 `sync`，让 Durpina 的 peer 列表跟当前 conf 对齐。
 
 [Durpina](https://github.com/slact/durpina) 负责运行时改 peer 的 `up` / `down`。它是 OpenResty 上的动态 upstream 库，全称 Dynamic Upstream Reverse Proxying with Nice API，从 toruneko 的 `lua-resty-upstream` 分出来。peer 状态进 `lua_shared_dict`，`balancer_by_lua` 每次选后端时读这份状态。管理口只留探活、看节点、改状态、和 `nginx.conf` 对齐、一键全开。日常操作不手搓 curl，包一层 `durpina-manager.sh`。
 
@@ -42,27 +42,15 @@ opm install slact/durpina
 
 ## 配置怎么拆
 
-`nginx.conf` 里只加两行 http 级 include，每个要交给 Durpina 调度的 `upstream` 再加一行 balancer include。不要把 Lua 块直接写进主配置。
+`nginx.conf` 的 `http` 里只加两行 include：共享内存和管理口。发行版通常已经 `include conf.d/*.conf`，有了就不要再写一遍。每个要交给 Durpina 调度的 `upstream`，再在那个块里 include `durpina-balancer.conf`。业务 `upstream` 和 `server` 仍放在 `conf.d`，不要把 Lua 块直接写进主配置。
+
+`/usr/local/openresty/nginx/conf/nginx.conf`：
 
 ```nginx
 http {
     include /usr/local/openresty/nginx/conf/durpina/durpina-http.conf;
     include /usr/local/openresty/nginx/conf/durpina/durpina-admin.conf;
-
-    upstream openapiserver-group {
-        server 10.0.0.11:8080;
-        server 10.0.0.12:8080;
-        server 10.0.0.13:8080;
-        # ...
-        include /usr/local/openresty/nginx/conf/durpina/durpina-balancer.conf;
-    }
-
-    server {
-        listen 80;
-        location / {
-            proxy_pass http://openapiserver-group;
-        }
-    }
+    include /usr/local/openresty/nginx/conf/conf.d/*.conf;
 }
 ```
 
@@ -71,6 +59,8 @@ http {
 ### http：共享内存和初始化
 
 `durpina-http.conf` 放在 http 级。`lua_package_path` 指向 `opm` 装出来的 `resty_modules`，worker 才能 `require "durpina.upstream"`。Durpina **必须**在 `init_worker_by_lua` 里调用 `Upstream.init`，参数是共享内存的名字，要和 `lua_shared_dict` 一致。这里用 `durpina_upstream`，10m。后端全是 IPv4 直连，不传 `resolver`。
+
+`/usr/local/openresty/nginx/conf/durpina/durpina-http.conf`：
 
 ```nginx
 lua_package_path
@@ -94,19 +84,69 @@ OpenResty 一个 master 带多个 worker。每个 worker 有自己的 Lua 虚拟
 
 ### upstream：把选路交给 Lua
 
+`durpina-balancer.conf` 只有这一段：
+
+`/usr/local/openresty/nginx/conf/durpina/durpina-balancer.conf`：
+
 ```nginx
 balancer_by_lua_block {
     require("durpina.balancer")("round-robin")
 }
 ```
 
-`round-robin` 是加权轮询。库还提供 `unweighted-round-robin`、`ip-hash`、`consistent-hash`。滚动时池子里还 `up` 的节点继续轮询，正在重启的那台不在里面。`server 0.0.0.0` 在 Durpina 里当占位符，会被忽略。
+`balancer_by_lua_block` 只能写在 `upstream {}` 里，写到 `http` 或 `server` 会直接报错。所以业务配置要把这行 include 塞进对应的 `upstream` 块，放在 `server` 列表后面、块结束之前。抽成独立文件是为了多个 upstream 复用，业务 conf 里不再堆 Lua。不要把这段 Lua 再抄进 `conf.d`，include 一次即可。
 
-业务 `location` 仍然 `proxy_pass http://openapiserver-group;`，应用层无感知。
+线上这份在 `conf.d`。域名、证书路径、机器名都换成示例：
+
+`/usr/local/openresty/nginx/conf/conf.d/openapi.conf`：
+
+```nginx
+upstream openapiserver-group {
+    #least_conn;
+    #ip_hash;
+    server  10.0.0.11:8080  weight=5 max_fails=2 fail_timeout=10s;
+    server  10.0.0.12:8080  weight=5 max_fails=2 fail_timeout=10s;
+    server  10.0.0.13:8080  weight=5 max_fails=2 fail_timeout=10s;
+    server  10.0.0.14:8080  weight=5 max_fails=2 fail_timeout=10s;
+    server  10.0.0.15:8080  weight=5 max_fails=2 fail_timeout=10s;
+    server  10.0.0.16:8080  weight=5 max_fails=2 fail_timeout=10s;
+    include /usr/local/openresty/nginx/conf/durpina/durpina-balancer.conf;
+}
+
+server {
+    listen 443 ssl;
+    server_name api.example.com;
+
+    ssl_certificate     /usr/local/openresty/nginx/ssl/api.example.com.pem;
+    ssl_certificate_key /usr/local/openresty/nginx/ssl/api.example.com.key;
+
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 10s;
+        proxy_read_timeout 30s;
+        proxy_pass http://openapiserver-group/;
+        proxy_next_upstream error timeout invalid_header http_502 http_504 http_404;
+        proxy_next_upstream_tries 2;
+        proxy_next_upstream_timeout 60s;
+    }
+}
+```
+
+`least_conn` 和 `ip_hash` 要注释掉。选路已经交给 `balancer_by_lua`，再开 nginx 原生算法会和 Durpina 抢。`weight` 仍有效，Durpina 的 `round-robin` 是加权轮询，会读这一列。`max_fails` / `fail_timeout` 管的是失败计数打成 `failing`，和滚动时人设的 `down` 不是一回事。
+
+`round-robin` 之外，库还提供 `unweighted-round-robin`、`ip-hash`、`consistent-hash`。滚动时池子里还 `up` 的节点继续轮询，正在重启的那台不在里面。`server 0.0.0.0` 在 Durpina 里当占位符，会被忽略。
+
+业务 `location` 仍然 `proxy_pass http://openapiserver-group;`，应用层无感知。不走 Durpina 的其他 upstream，不要加这行 include。
 
 ### admin：只绑内网
 
 管理口单独一个 `server`，不要和对外 80/443 共用。监听回环和内网地址，白名单放本机和运维跳板，其余一律 `deny`。
+
+`/usr/local/openresty/nginx/conf/durpina/durpina-admin.conf`：
 
 ```nginx
 server {
@@ -224,6 +264,8 @@ curl -s -X POST \
 
 `action` 只接受 `up` 或 `down`。内部是：
 
+`/usr/local/openresty/nginx/lua/durpina/set.lua`：
+
 ```lua
 local peer = upstream:get_peer(node)
 local call_ok, set_result = pcall(peer.set_state, peer, action)
@@ -274,7 +316,7 @@ curl -s -X POST \
 
 `sync` 用 `ngx.upstream.get_servers()` 当期望列表，和 `upstream:get_peers("all")` 做差：缺的加，多的删，IPv4 却没有 address 的删掉重建，权重变了就 `set_weight`。`backup` 节点和 `0.0.0.0` 占位符直接跳过。
 
-加减机器的顺序是：改 `nginx.conf` → `nginx -s reload` → `durpina-manager.sh sync`。滚动发版不走 sync，也不 reload Nginx。
+加减机器的顺序是：改 `nginx.conf` → `openresty -s reload` → `durpina-manager.sh sync`。滚动发版不走 sync，也不 reload Nginx。
 
 ## 管理脚本
 
@@ -1300,14 +1342,14 @@ durpina_timeout: 10
 upstream 里要加机器或删机器，不走上面的 `down` / `up`。顺序是：
 
 1. 改 `nginx.conf`（或 `conf.d`）里这个 `upstream` 的 `server`
-2. `nginx -s reload`
+2. `openresty -s reload`
 3. `./durpina-manager.sh sync`
 
 ```bash
 # 1. 编辑 nginx.conf，例如在 openapiserver-group 里增加：
 #    server 10.0.0.14:8080;
 
-nginx -t && nginx -s reload
+openresty -t && openresty -s reload
 ./durpina-manager.sh sync
 ./durpina-manager.sh list
 ```
@@ -1359,7 +1401,7 @@ down → 切软链 → supervisorctl restart → 探活 → up → 下一批
 加减机器：
 
 ```
-改 nginx.conf → nginx -s reload → durpina-manager.sh sync
+改 nginx.conf → openresty -s reload → durpina-manager.sh sync
 ```
 
 每次写操作前后都看 `list` 或 `status`。状态以读回来的 `state` 为准。`state` 还不是 `down`，就不要重启那台的 supervisord。
